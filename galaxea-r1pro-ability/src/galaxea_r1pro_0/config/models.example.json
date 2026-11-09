@@ -1,0 +1,112 @@
+{
+  "defaults": {
+    "yolo_detect": "fake-perception-default",
+    "grasp_planning": "fake-grasp-default",
+    "policy_control": "fake-policy-default"
+  },
+  "profiles": {
+    "fake-perception-default": {
+      "ability_role": "yolo_detect",
+      "provider": "fake",
+      "enabled": true,
+      "settings": {"checkpoint_path": "xxx"}
+    },
+    "fake-perception-alt": {
+      "ability_role": "yolo_detect",
+      "provider": "fake",
+      "enabled": true,
+      "settings": {
+        "variant": "alternative"
+      }
+    },
+    "fake-grasp-default": {
+      "ability_role": "grasp_planning",
+      "provider": "fake",
+      "enabled": true,
+      "settings": {}
+    },
+    "fake-policy-default": {
+      "ability_role": "policy_control",
+      "provider": "fake",
+      "enabled": true,
+      "settings": {}
+    }
+  },
+  "cameras": {
+    "head_camera": {
+      "camera_frame": "head_color_optical_frame",
+      "base_frame": "base_link",
+      "robot_frame": "base_link",
+      "camera_intrinsics": {
+        "fx": 386.28,
+        "fy": 385.82,
+        "cx": 324.79,
+        "cy": 241.47
+      },
+      "depth_scale": 0.001,
+      "camera_extrinsics": {
+        "camera_to_tcp": [
+          0.0,
+          0.0,
+          0.0,
+          -1.5708,
+          0.0,
+          -1.5708
+        ],
+      "tcp_frame": [
+          0.1,
+          -0.02,
+          0.66,
+          -0.0349,
+          0.698,
+          -0.0
+        ]
+      }
+    },
+    "left_wrist_camera": {
+      "camera_frame": "left_wrist_color_optical_frame",
+      "base_frame": "base_link",
+      "robot_frame": "base_link",
+      "camera_intrinsics": {
+        "fx": null,
+        "fy": null,
+        "cx": null,
+        "cy": null
+      },
+      "depth_scale": 0.001,
+      "camera_extrinsics": {
+        "camera_to_tcp": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "tcp_frame": "left_tcp_link"
+      }
+    },
+    "external_camera": {
+      "camera_frame": "external_color_optical_frame",
+      "base_frame": "base_link",
+      "robot_frame": "base_link",
+      "camera_intrinsics": {
+        "fx": null,
+        "fy": null,
+        "cx": null,
+        "cy": null
+      },
+      "depth_scale": 0.001,
+      "camera_extrinsics": {
+        "camera_to_base": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  }
+}

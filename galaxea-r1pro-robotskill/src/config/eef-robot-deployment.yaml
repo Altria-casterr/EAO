@@ -1,0 +1,48 @@
+api_version: 1
+robot:
+  id: "r1pro-galaxea-real"
+  display_name: "R1 Pro Galaxea Real (external AF)"
+  model: "r1pro"
+  backend: "real"
+  sdk:
+    package: "semantic-robot-sdk-r1pro"
+    firmware_profile: "fake-v1"
+    providers:
+      kinematics: fake
+      motion: local
+      navigation: local
+    options:
+      auto_complete: true
+      stop_confirmed: true
+  frames:
+    world: world
+    base: base_link
+    end_effectors:
+      left: "left_tote_load_frame"
+      right: "right_tote_load_frame"
+  safety:
+    maximum_base_speed: 0.4
+    maximum_joint_speed: 0.5
+ability_framework:
+  endpoint: "http://127.0.0.1:8080"
+  managed_by_instance: false
+# 只声明本次验证用到的语义角色；键名必须与 ability.manifest.yaml 的 abilityRole 严格一致。
+#   end_effector    —— 仅 Gripper.Demo 声明
+#   navigation      —— WooshNavigation.Demo（follow_route / verify_arrival / stop）
+#   navigation_move —— WooshMove.Demo（relative_move / stop）
+#   同一角色存在多个健康实例时 pilot 拒绝随机选择，会直接绑不上；
+#   此时用下行的 instance_id 精确指定：navigation: { instance_id: "<实例 UUID>" }
+abilities:
+  robot: { instance_id: "4171b26f-ab5a-4108-9776-6362f84ac08c" }
+  end_effector: { instance_id: "c858559d-057f-4361-a0b5-cf7d818ad3fc" }
+  navigation: { instance_id: "9cd37c8e-6bd0-469f-bf8f-f57b2ad52fc6" }
+  torso: { instance_id: "ab58a7af-376a-4818-b38e-ecfb584989e8" }
+  # 2026-10-05 更新：指向当前 Running 的 JointEEFPoseControl 1.0.2 实例
+  #   （cd ../../semantic-ability/galaxea-r1pro-ability && ./requirments/ability_tool activate joint-eef-pose-control-demo 后，
+  #     用 curl -s localhost:8080/api/ability-heartbeat 过滤 JointEEF 取真实 instance_id）
+  manipulator_motion: { instance_id: "d9fc2922-45b8-4362-8373-de24976a66c4" }
+pilot:
+  id: "pilot-r1pro-galaxea-real"
+  worker_timeout_seconds: 30
+  heartbeat_interval_seconds: 2
+  allow_ability_debug: true

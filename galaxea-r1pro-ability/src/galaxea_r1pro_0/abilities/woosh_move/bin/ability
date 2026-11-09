@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# woosh_move：从当前仓库加载能力源码，独立 Robot SDK 由路径或安装环境提供。
+# 环境覆盖顺序：机器级、仓库级、包级、ABILITY_LOCAL_ENV，后者优先。
+set -euo pipefail
+
+BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+ABILITY_DIR="$(cd "$BIN_DIR/.." && pwd)"
+REPO_ROOT=""
+if command -v git >/dev/null 2>&1; then
+  candidate="$(git -C "$ABILITY_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -n "$candidate" && -d "$candidate/src/galaxea_r1pro_0" ]]; then
+    REPO_ROOT="$candidate"
+  fi
+fi
+# 源码副本或仓库内的已安装包没有 .git 时，仍可从祖先目录定位源码。
+if [[ -z "$REPO_ROOT" ]]; then
+  candidate="$ABILITY_DIR"
+  while [[ "$candidate" != / ]]; do
+    if [[ -d "$candidate/src/galaxea_r1pro_0" ]]; then
+      REPO_ROOT="$candidate"
+      break
+    fi
+    candidate="$(dirname "$candidate")"
+  done
+fi
+
+for env_file in "${HOME:-}/.config/ability/local.env" \
+                "${REPO_ROOT:+$REPO_ROOT/.ability-local.env}" \
+                "$ABILITY_DIR/.ability-local.env" \
+                "${ABILITY_LOCAL_ENV:-}"; do
+  if [[ -n "$env_file" && -f "$env_file" ]]; then
+    set +u
+    . "$env_file"
+    set -u
+  fi
+done
+# 非 export 的本机配置也需要传给 Python 进程。
+for variable in ROBOT_PROFILE_PATH MODEL_REGISTRY_PATH; do
+  if [[ -n "${!variable:-}" ]]; then
+    export "$variable"
+  fi
+done
+
+first_dir() {
+  local directory
+  for directory in "$@"; do
+    if [[ -n "$directory" && -d "$directory" ]]; then
+      printf '%s' "$directory"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# 保留旧源码覆盖变量的兼容性，默认只使用当前仓库。
+ABILITY_SRC="${ABILITY_SRC:-${SKILL_ABILITY_SRC:-${REPO_ROOT:+$REPO_ROOT/src}}}"
+SDK_SRC="${GALAXEA_SDK_SRC:-${SKILL_LIBRARY_SRC:-$(first_dir \
+  "${REPO_ROOT:+$REPO_ROOT/../../semantic-robotsdk/galaxea-r1pro-sdk/src}" \
+  "${REPO_ROOT:+$REPO_ROOT/../galaxea-r1pro-sdk/src}" \
+  "${REPO_ROOT:+$REPO_ROOT/../skill_library/src}" || true)}}"
+
+PYTHONPATH_NEW=""
+for directory in "$ABILITY_SRC" "$SDK_SRC"; do
+  if [[ -n "$directory" ]]; then
+    if [[ ! -d "$directory" ]]; then
+      echo "[ability] Python 源码目录不存在：$directory" >&2
+      exit 2
+    fi
+    PYTHONPATH_NEW="${PYTHONPATH_NEW:+$PYTHONPATH_NEW:}$directory"
+  fi
+done
+export PYTHONPATH="${PYTHONPATH_NEW}${PYTHONPATH:+${PYTHONPATH_NEW:+:}$PYTHONPATH}"
+
+exec "${ABILITY_PYTHON:-python3}" "$ABILITY_DIR/main.py" "$@"

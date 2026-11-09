@@ -1,0 +1,464 @@
+abilityName: YoloDetect.Demo
+kind: AtomAbility
+schema:
+  config:
+    openAPIV3Schema:
+      description: YOLO 掩码深度点云能力配置
+      properties:
+        robotProfilePath:
+          description: R1 Pro SDK profile 路径
+          type: string
+        modelRegistryPath:
+          description: 模型及相机内外参 JSON 路径，默认 config/models.example.json；相机配置位于顶层 cameras
+          type: string
+tasks:
+- params:
+  - description: 幂等调用 ID，用于查询/停止本次执行（可选）
+    name: invocation_id
+    optional: true
+    type: string
+  - description: 默认 false；开启后仅对 gray_box 生成点云，不处理 gray_box_p 等其他标签；纯检测仍返回全部标签
+    name: gray_box_only
+    optional: true
+    type: boolean
+  - description: 默认 2，正整数；按精炼后 mask 有效点到相机原点的三维距离中位数由近到远，仅对前 K 个生成点云
+    name: top_k
+    optional: true
+    type: int
+  - description: 相机 ID
+    name: sensor_id
+    optional: true
+    type: string
+  - description: 相机光学坐标系，必须与 RGB 对齐的深度反投影坐标轴一致
+    name: camera_frame
+    optional: true
+    type: string
+  - description: 实际输出坐标系，默认 base_link
+    name: robot_frame
+    optional: true
+    type: string
+  - description: camera_to_base，或 camera_to_tcp + tcp_frame/当次 tcp_to_base；六维格式平移毫米、旋转弧度
+    name: camera_extrinsics
+    optional: true
+    type: object
+  - description: 完整相机到输出坐标系变换，position 单位米、orientation 为 xyzw；与 camera_extrinsics
+      互斥
+    name: transform_camera_to_robot
+    optional: true
+    type: object
+  - description: 完整内参 fx/fy/cx/cy，对应对齐后图像分辨率
+    name: camera_intrinsics
+    optional: true
+    type: object
+  - description: 相机内参 fx
+    name: fx
+    optional: true
+    type: float
+  - description: 相机内参 fy
+    name: fy
+    optional: true
+    type: float
+  - description: 相机内参 cx
+    name: cx
+    optional: true
+    type: float
+  - description: 相机内参 cy
+    name: cy
+    optional: true
+    type: float
+  - description: 深度值到米的比例，必须在任务或相机配置中提供
+    name: depth_scale
+    optional: true
+    type: float
+  - description: 每个目标最多保留的点数
+    name: max_points
+    optional: true
+    type: int
+  - description: YOLO 置信度阈值，默认 0.5
+    name: conf_threshold
+    optional: true
+    default: 0.5
+    type: float
+  - description: YOLO IoU 阈值，默认 0.5
+    name: iou_threshold
+    optional: true
+    default: 0.5
+    type: float
+  - name: base_frame
+    type: string
+    optional: true
+    description: 外参中的 base 坐标系，默认 base_link
+  - name: point_cloud_filter
+    type: object
+    optional: true
+    description: fast_voxel（默认）或 legacy_dbscan；距离参数使用米，见 README
+  - name: refine_mask
+    type: bool
+    optional: true
+    description: 是否执行参考脚本的深度掩码清理，默认 true
+  - name: transform_timeout_s
+    type: float
+    optional: true
+    description: 动态 TF 等待时限，默认 2 秒
+  - name: transform_max_age_s
+    type: float
+    optional: true
+    description: 动态 TF 自最后更新的最大时间，默认 1 秒
+  returns:
+  - description: 结果使用真实 robot_frame；center_robot 为过滤后完整点云的包围盒中心，附实际变换与 filter_stats
+    name: None
+    type: object
+    properties:
+      output:
+        type: object
+        description: 执行记录及点云结果
+      message:
+        type: string
+        description: 任务执行说明
+  summary: 根据 YOLO 掩码和深度图生成目标点云并转换到机器人本体坐标系
+  taskName: generate_point_cloud
+  abilityRole: perception
+  actionType: perception.generate_point_cloud
+  schemaVersion: 2
+  physical: false
+  taskType: 0
+- params:
+  - description: 幂等调用 ID
+    name: invocation_id
+    optional: true
+    type: string
+  - description: 默认 false；开启后仅对 gray_box 生成点云，不处理 gray_box_p 等其他标签；纯检测仍返回全部标签
+    name: gray_box_only
+    optional: true
+    type: boolean
+  - description: 默认 2，正整数；按精炼后 mask 有效点到相机原点的三维距离中位数由近到远，仅对前 K 个生成点云
+    name: top_k
+    optional: true
+    type: int
+  - description: 相机 ID
+    name: sensor_id
+    optional: true
+    type: string
+  - description: YOLO 置信度阈值，默认 0.5
+    name: conf_threshold
+    optional: true
+    default: 0.5
+    type: float
+  - description: YOLO IoU 阈值，默认 0.5
+    name: iou_threshold
+    optional: true
+    default: 0.5
+    type: float
+  - description: 是否返回完整二值掩码
+    name: include_masks
+    optional: true
+    type: bool
+  - description: YOLO 输入图像尺寸
+    name: imgsz
+    optional: true
+    type: array
+  - description: YOLO 推理设备
+    name: device
+    optional: true
+    type: string
+  - description: YOLO 类别名称映射
+    name: class_names
+    optional: true
+    type: object
+  returns:
+  - description: YOLO 检测框、类别、置信度和可选掩码
+    name: None
+    type: object
+  summary: 执行 YOLO 目标检测与掩码分割
+  taskName: yolo_detect
+  abilityRole: perception
+  actionType: perception.yolo_detect
+  schemaVersion: 2
+  physical: false
+  taskType: 1
+- params:
+  - description: 幂等调用 ID
+    name: invocation_id
+    optional: true
+    type: string
+  - description: 目标点，机器人本体坐标系，单位米
+    name: target_point
+    optional: false
+    type: array
+  - description: X 方向最大偏差，单位米
+    name: delta_threshold_x
+    optional: true
+    type: float
+  - description: Y 方向最大偏差，单位米
+    name: delta_threshold_y
+    optional: true
+    type: float
+  - description: Z 方向最大偏差，单位米
+    name: delta_threshold_z
+    optional: true
+    type: float
+  - description: 默认 false；开启后仅对 gray_box 生成点云，不处理 gray_box_p 等其他标签；纯检测仍返回全部标签
+    name: gray_box_only
+    optional: true
+    type: boolean
+  - description: 默认 2，正整数；按精炼后 mask 有效点到相机原点的三维距离中位数由近到远，仅对前 K 个生成点云
+    name: top_k
+    optional: true
+    type: int
+  - description: 相机 ID
+    name: sensor_id
+    optional: true
+    type: string
+  - description: 深度值到米的比例，必须在任务或相机配置中提供
+    name: depth_scale
+    optional: true
+    type: float
+  - description: 每个目标最多保留的点数
+    name: max_points
+    optional: true
+    type: int
+  - description: YOLO 置信度阈值，默认 0.5
+    name: conf_threshold
+    optional: true
+    default: 0.5
+    type: float
+  - description: YOLO IoU 阈值，默认 0.5
+    name: iou_threshold
+    optional: true
+    default: 0.5
+    type: float
+  - description: 完整内参 fx/fy/cx/cy，对应对齐后图像分辨率
+    name: camera_intrinsics
+    optional: true
+    type: object
+  - description: camera_to_base，或 camera_to_tcp + tcp_frame/当次 tcp_to_base；六维格式平移毫米、旋转弧度
+    name: camera_extrinsics
+    optional: true
+    type: object
+  - description: 完整相机到输出坐标系变换，position 单位米、orientation 为 xyzw；与 camera_extrinsics
+      互斥
+    name: transform_camera_to_robot
+    optional: true
+    type: object
+  - name: base_frame
+    type: string
+    optional: true
+    description: 外参中的 base 坐标系，默认 base_link
+  - name: camera_frame
+    type: string
+    optional: true
+    description: 相机光学坐标系，必须与 RGB 对齐的深度反投影坐标轴一致
+  - name: robot_frame
+    type: string
+    optional: true
+    description: 实际输出坐标系，默认 base_link
+  - name: point_cloud_filter
+    type: object
+    optional: true
+    description: fast_voxel（默认）或 legacy_dbscan；距离参数使用米，见 README
+  - name: refine_mask
+    type: bool
+    optional: true
+    description: 是否执行参考脚本的深度掩码清理，默认 true
+  - name: transform_timeout_s
+    type: float
+    optional: true
+    description: 动态 TF 等待时限，默认 2 秒
+  - name: transform_max_age_s
+    type: float
+    optional: true
+    description: 动态 TF 自最后更新的最大时间，默认 1 秒
+  returns:
+  - description: 结果使用真实 robot_frame；center_robot 为过滤后完整点云的包围盒中心，附实际变换与 filter_stats
+    name: None
+    type: object
+  summary: 根据目标点匹配距离最近的 YOLO 分割目标
+  taskName: match_target
+  abilityRole: perception
+  actionType: perception.match_target
+  schemaVersion: 2
+  physical: false
+  taskType: 2
+- params:
+  - description: 幂等调用 ID
+    name: invocation_id
+    optional: true
+    type: string
+  - description: 可选参考点云 N×3，单位米，需 reference_frame；未提供则读取独立标定的参考 RGB-D
+    name: reference_points
+    optional: true
+    type: array
+  - description: 目标点，机器人本体坐标系，单位米；先匹配最近箱子，再生成目标点云用于姿态估计
+    name: target_point
+    optional: false
+    type: array
+  - description: X 方向最大偏差，单位米
+    name: delta_threshold_x
+    optional: true
+    type: float
+  - description: Y 方向最大偏差，单位米
+    name: delta_threshold_y
+    optional: true
+    type: float
+  - description: Z 方向最大偏差，单位米
+    name: delta_threshold_z
+    optional: true
+    type: float
+  - description: 默认 false；开启后仅对 gray_box 生成点云，不处理 gray_box_p 等其他标签；纯检测仍返回全部标签
+    name: gray_box_only
+    optional: true
+    type: boolean
+  - description: 默认 2，正整数；按精炼后 mask 有效点到相机原点的三维距离中位数由近到远，仅对前 K 个生成点云
+    name: top_k
+    optional: true
+    type: int
+  - description: 相机 ID
+    name: sensor_id
+    optional: true
+    type: string
+  - description: 深度值到米的比例，必须在任务或相机配置中提供
+    name: depth_scale
+    optional: true
+    type: float
+  - description: 每个目标最多保留的点数
+    name: max_points
+    optional: true
+    type: int
+  - description: 完整内参 fx/fy/cx/cy，对应对齐后图像分辨率
+    name: camera_intrinsics
+    optional: true
+    type: object
+  - description: camera_to_base，或 camera_to_tcp + tcp_frame/当次 tcp_to_base；六维格式平移毫米、旋转弧度
+    name: camera_extrinsics
+    optional: true
+    type: object
+  - description: 完整相机到输出坐标系变换，position 单位米、orientation 为 xyzw；与 camera_extrinsics
+      互斥
+    name: transform_camera_to_robot
+    optional: true
+    type: object
+  - description: YOLO 置信度阈值，默认 0.5
+    name: conf_threshold
+    optional: true
+    default: 0.5
+    type: float
+  - description: YOLO IoU 阈值，默认 0.5
+    name: iou_threshold
+    optional: true
+    default: 0.5
+    type: float
+  - description: Yaw 搜索范围，单位度
+    name: yaw_range
+    optional: true
+    type: array
+  - description: 粗搜索步长，单位度
+    name: search_step
+    optional: true
+    type: float
+  - description: 精搜索容差，单位度
+    name: focus_step
+    optional: true
+    type: float
+  - description: 是否搜索 Roll 轴
+    name: enable_roll
+    optional: true
+    type: bool
+  - description: 是否搜索 Pitch 轴
+    name: enable_pitch
+    optional: true
+    type: bool
+  - description: 是否搜索 Yaw 轴
+    name: enable_yaw
+    optional: true
+    type: bool
+  - name: base_frame
+    type: string
+    optional: true
+    description: 外参中的 base 坐标系，默认 base_link
+  - name: camera_frame
+    type: string
+    optional: true
+    description: 相机光学坐标系，必须与 RGB 对齐的深度反投影坐标轴一致
+  - name: robot_frame
+    type: string
+    optional: true
+    description: 实际输出坐标系，默认 base_link
+  - name: point_cloud_filter
+    type: object
+    optional: true
+    description: fast_voxel（默认）或 legacy_dbscan；距离参数使用米，见 README
+  - name: refine_mask
+    type: bool
+    optional: true
+    description: 是否执行参考脚本的深度掩码清理，默认 true
+  - name: transform_timeout_s
+    type: float
+    optional: true
+    description: 动态 TF 等待时限，默认 2 秒
+  - name: transform_max_age_s
+    type: float
+    optional: true
+    description: 动态 TF 自最后更新的最大时间，默认 1 秒
+  - name: reference_camera
+    type: object
+    optional: true
+    description: 参考图片拍摄时的独立完整标定，禁止使用实时 TF
+  - name: reference_frame
+    type: string
+    optional: true
+    description: 直接传入参考点云时必填，必须与目标 robot_frame 相同
+  - name: reference_target_point
+    type: array
+    optional: true
+    description: 参考图多目标时用于选择参考物体的点，单位米
+  - name: reference_dir
+    type: string
+    optional: true
+    description: 参考 RGB-D 图片目录
+  - name: reference_class_id
+    type: int
+    optional: true
+    description: 参考类别 ID
+  - name: reference_class_name
+    type: string
+    optional: true
+    description: 参考类别名称
+  returns:
+  - description: 结果使用真实 robot_frame；center_robot 为过滤后完整点云的包围盒中心，附实际变换与 filter_stats
+    name: None
+    type: object
+  summary: 使用参考点云和目标点云估计物体旋转姿态
+  taskName: estimate_object_pose
+  abilityRole: perception
+  actionType: perception.estimate_object_pose
+  schemaVersion: 2
+  physical: false
+  taskType: 3
+- params:
+  - description: 调用 ID
+    name: invocation_id
+    optional: false
+    type: string
+  returns:
+  - description: 输出为执行记录字典
+    name: None
+    type: object
+  summary: 查询本 Ability 启动的语义执行
+  taskName: GetExecution
+  taskType: 4
+- params:
+  - description: 调用 ID
+    name: invocation_id
+    optional: false
+    type: string
+  - description: 停止原因
+    name: reason
+    optional: true
+    type: string
+  returns:
+  - description: 输出为执行记录字典
+    name: None
+    type: object
+  summary: 停止底层命令并让相关资源进入 hold
+  taskName: StopExecution
+  taskType: 5

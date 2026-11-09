@@ -1,0 +1,21 @@
+{
+  "navigation_purpose": "carry_to_place",
+  "mode": "left",
+  "target": {
+    "target_ref": "box001",
+    "position_m": [
+      2.045,
+      -1.835,
+      1.26
+    ],
+    "yaw_rad": 0
+  },
+  "frame_id": "map",
+  "target_point_type": 0,
+  "timeout": 60,
+  "verify": {
+    "carrying_force_axis": "x",
+    "carrying_min_load_n": 1
+  },
+  "move_y_m": 0.1
+}

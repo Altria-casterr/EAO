@@ -1,0 +1,39 @@
+# 运行脚本按确切 Ability 名称绑定当次 Running 实例。可填写 instance_id 固定实例。
+api_version: 1
+robot:
+  id: r1pro-galaxea-real
+  display_name: R1 Pro Galaxea Real - Prepare
+  model: r1pro
+  backend: real
+  sdk:
+    package: semantic-robot-sdk-r1pro
+    firmware_profile: fake-v1
+    providers:
+      kinematics: fake
+      motion: local
+      navigation: local
+    options:
+      auto_complete: true
+      stop_confirmed: true
+  frames:
+    world: world
+    base: base_link
+    end_effectors:
+      left: left_tote_load_frame
+      right: right_tote_load_frame
+  safety:
+    maximum_base_speed: 0.4
+    maximum_joint_speed: 0.5
+ability_framework:
+  endpoint: http://127.0.0.1:8080
+  managed_by_instance: false
+abilities:
+  torso:
+    instance_id: ab58a7af-376a-4818-b38e-ecfb584989e8
+  joint_motion:
+    instance_id: 06f7213b-4379-408b-8ce7-19aabb2e5273
+pilot:
+  id: pilot-robot-prepare
+  worker_timeout_seconds: 300
+  heartbeat_interval_seconds: 2
+  allow_ability_debug: true

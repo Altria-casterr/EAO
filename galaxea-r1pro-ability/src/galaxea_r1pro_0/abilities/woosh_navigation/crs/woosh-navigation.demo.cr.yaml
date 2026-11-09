@@ -1,0 +1,23 @@
+kind: AtomAbility
+metadata:
+  name: woosh-navigation-demo
+spec:
+  abilityName: WooshNavigation.Demo
+  package: woosh.navigation.demo
+  version: 1.0.0
+  position: localhost
+  config:
+    robotProfilePath: /home/morefine/ws/SEMF/workspace/semantic-ability/galaxea-r1pro-ability/src/galaxea_r1pro_0/config/r1pro-real.json
+  tasks:
+    - taskType: 0
+      taskName: navigate_to_map_pose
+    - taskType: 1
+      taskName: stop
+    - taskType: 2
+      taskName: verify_arrival
+    - taskType: 3
+      taskName: GetExecution
+    - taskType: 4
+      taskName: StopExecution
+  autoStart: false
+  singleton: false

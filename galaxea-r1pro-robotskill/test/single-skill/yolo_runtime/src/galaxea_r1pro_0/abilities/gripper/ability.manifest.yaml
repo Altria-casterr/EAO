@@ -1,0 +1,266 @@
+abilityName: Gripper.Demo
+kind: AtomAbility
+schema:
+  config:
+    openAPIV3Schema:
+      description: 能力配置结构
+      properties:
+        robotProfilePath:
+          description: R1 Pro SDK profile 路径
+          type: string
+  debugOption:
+    openAPIV3Schema:
+      description: 调试选项结构，不会影响业务行为，只会留下额外的调试信息
+      properties:
+        logPictureWhenDetecting:
+          default: false
+          description: 如果是，则识别能力在运行时会将图片和识别结果保存到本地
+          type: bool
+      type: object
+tasks:
+- taskName: HandleSingleGripper
+  taskType: 0
+  abilityRole: end_effector
+  actionType: gripper.set_opening_single
+  schemaVersion: 2
+  physical: true
+  summary: 控制单侧夹爪移动到目标开度（含反馈闭环），发布目标后轮询夹爪实际开度直到到位或超时
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: hand
+    type: string
+    optional: true
+    default: left
+    description: 夹爪侧，可选 left 或 right，默认 left
+  - name: position
+    type: float
+    optional: true
+    default: 50.0
+    description: 目标开度（百分制 0-100，对应 tote_clamp 全行程 0-39mm），默认 50.0
+  - name: speed
+    type: float
+    optional: true
+    default: 0.5
+    description: 夹爪运动速度（0.0-1.0），默认 0.5
+  - name: effort
+    type: float
+    optional: true
+    default: 0.3
+    description: 夹爪力矩限制（0.0-1.0），默认 0.3
+  - name: tol
+    type: float
+    optional: true
+    default: 5.0
+    description: 到位容差（开度百分制差值），默认 5.0
+  - name: timeout
+    type: float
+    optional: true
+    default: 10.0
+    description: 运动超时时间，单位秒，默认 10.0
+  - name: loop_period
+    type: float
+    optional: true
+    default: 0.1
+    description: 夹爪状态轮询间隔，单位秒，默认 0.1
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"run-1","task_name":"HandleSingleGripper","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 任务执行结束后打印的相关内容
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: HandleBothGripper
+  taskType: 1
+  abilityRole: end_effector
+  actionType: gripper.set_opening_both
+  schemaVersion: 2
+  physical: true
+  summary: 控制左右夹爪同时移动到目标开度（含双向反馈闭环），左右并行发布后均到位才算成功
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: hand
+    type: string
+    optional: true
+    default: both
+    description: 控制模式，仅支持 both，默认 both
+  - name: left_position
+    type: float
+    optional: true
+    default: 50.0
+    description: 左夹爪目标开度（百分制 0-100），默认 50.0
+  - name: right_position
+    type: float
+    optional: true
+    default: 50.0
+    description: 右夹爪目标开度（百分制 0-100），默认 50.0
+  - name: left_speed
+    type: float
+    optional: true
+    default: 0.5
+    description: 左夹爪运动速度（0.0-1.0），默认 0.5
+  - name: right_speed
+    type: float
+    optional: true
+    default: 0.5
+    description: 右夹爪运动速度（0.0-1.0），默认 0.5
+  - name: left_effort
+    type: float
+    optional: true
+    default: 0.3
+    description: 左夹爪力矩限制（0.0-1.0），默认 0.3
+  - name: right_effort
+    type: float
+    optional: true
+    default: 0.3
+    description: 右夹爪力矩限制（0.0-1.0），默认 0.3
+  - name: tol
+    type: float
+    optional: true
+    default: 5.0
+    description: 左右共用到位容差（开度百分制差值），默认 5.0
+  - name: timeout
+    type: float
+    optional: true
+    default: 10.0
+    description: 左右共用运动超时时间，单位秒，默认 10.0
+  - name: loop_period
+    type: float
+    optional: true
+    default: 0.1
+    description: 左右共用状态轮询间隔，单位秒，默认 0.1
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"run-both","task_name":"HandleBothGripper","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 任务执行结束后打印的相关内容
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: GetExecution
+  taskType: 2
+  summary: 查询本 Ability 启动的语义执行
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"run-1","status":"running",...},"message":"查询执行记录"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          command_id:
+            type: string
+            description: 底层命令 ID
+          progress:
+            type: float
+            description: 执行进度
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: StopExecution
+  taskType: 3
+  summary: 停止底层命令并让相关资源进入 hold
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  - name: reason
+    type: string
+    optional: true
+    description: 停止原因（可选，默认为 pilot stop）
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"run-1","status":"stopped",...},"message":"停止底层命令"}
+    properties:
+      output:
+        type: object
+        description: 停止后的执行记录
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（stopped/interrupted）
+          phase:
+            type: string
+            description: 停止阶段（held/stop_unconfirmed）
+      message:
+        type: string
+        description: 任务执行说明

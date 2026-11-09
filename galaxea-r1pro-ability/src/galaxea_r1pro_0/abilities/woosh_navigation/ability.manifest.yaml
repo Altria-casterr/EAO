@@ -1,0 +1,265 @@
+abilityName: WooshNavigation.Demo
+kind: AtomAbility
+schema:
+  config:
+    openAPIV3Schema:
+      description: 能力配置结构
+      properties:
+        robotProfilePath:
+          description: R1 Pro SDK profile 路径
+          type: string
+  debugOption:
+    openAPIV3Schema:
+      description: 调试选项结构，不会影响业务行为，只会留下额外的调试信息
+      properties:
+        logPictureWhenDetecting:
+          default: false
+          description: 如果是，则识别能力在运行时会将图片和识别结果保存到本地
+          type: bool
+      type: object
+tasks:
+- taskName: navigate_to_map_pose
+  taskType: 0
+  abilityRole: navigation
+  actionType: navigation.follow_route
+  schemaVersion: 2
+  physical: true
+  summary: 导航到地图坐标系下的目标位置（SDK 内部同步等待完成，解锁刹车 + 等待/超时/紧急停止闭环）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: target_x
+    type: float
+    optional: true
+    default: 0.0
+    description: 目标位置 x（frame_id 坐标系，单位米），默认 0.0
+  - name: target_y
+    type: float
+    optional: true
+    default: 0.0
+    description: 目标位置 y（frame_id 坐标系，单位米），默认 0.0
+  - name: target_orientation
+    type: array
+    items:
+      type: float
+    optional: true
+    default: [0.0, 0.0, 0.0, 1.0]
+    description: 目标姿态四元数 [qx, qy, qz, qw]，仅使用其 yaw 分量作为导航朝向（度）；默认 [0,0,0,1]（无旋转）
+  - name: target_point_type
+    type: int
+    optional: true
+    default: 0
+    description: 目标点类型（透传 SDK navigate_to_map_pose 的 target_point_type），默认 0
+  - name: frame_id
+    type: string
+    optional: true
+    default: map
+    description: 目标位姿所在的坐标系，默认 map
+  - name: timeout
+    type: float
+    optional: true
+    default: 60.0
+    description: 导航超时时间，单位秒，默认 60.0
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"n1","task_name":"navigate_to_map_pose","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: stop
+  taskType: 1
+  abilityRole: navigation
+  actionType: navigation.stop
+  schemaVersion: 2
+  physical: true
+  summary: 停止所有运动与导航（紧急停止置位 + 零速发布）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"n3","task_name":"stop","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: verify_arrival
+  taskType: 2
+  abilityRole: navigation
+  actionType: navigation.verify_arrival
+  schemaVersion: 2
+  physical: false
+  summary: 按腕部力传感检查手中是否仍有搬运物体（指定方向分量超阈值；不做位姿/距离校验）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: tool_refs
+    type: array
+    items:
+      type: string
+    optional: true
+    description: 可选；检查侧别列表，如 [left]、[right] 或 [left, right]；不传或为空则检查左右两侧腕力
+  - name: carrying_force_axis
+    type: string
+    optional: true
+    default: z
+    description: 可选；用哪个方向的腕力判负载：x / y / z（该分量）或 norm（合力），默认 z；判定取绝对值
+  - name: carrying_min_load_n
+    type: float
+    optional: true
+    default: 3.0
+    description: 可选；carrying_force_axis 指定方向的负载阈值（牛，默认 3.0，需按真机标定）
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行结果字典，示例 {"status":"completed","verdict":"achieved","holding_object":true,"carrying_check":{...}}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（completed/failed）
+          result:
+            type: object
+            description: 持物检查结果（verdict/holding_object/carrying_check）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: GetExecution
+  taskType: 3
+  summary: 查询本 Ability 启动的语义执行
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"n1","status":"running",...},"message":"查询执行记录"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          command_id:
+            type: string
+            description: 底层命令 ID
+          progress:
+            type: float
+            description: 执行进度
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: StopExecution
+  taskType: 4
+  summary: 停止底层命令并让相关资源进入 hold
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  - name: reason
+    type: string
+    optional: true
+    description: 停止原因（可选，默认为 pilot stop）
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"n1","status":"stopped",...},"message":"停止底层命令"}
+    properties:
+      output:
+        type: object
+        description: 停止后的执行记录
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（stopped/interrupted）
+          phase:
+            type: string
+            description: 停止阶段（held/stop_unconfirmed）
+      message:
+        type: string
+        description: 任务执行说明

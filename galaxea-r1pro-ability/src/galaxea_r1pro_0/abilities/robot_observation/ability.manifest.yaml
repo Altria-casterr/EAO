@@ -1,0 +1,216 @@
+abilityName: RobotObservation.Demo
+kind: AtomAbility
+schema:
+  config:
+    openAPIV3Schema:
+      description: 能力配置结构
+      properties:
+        robotProfilePath:
+          description: R1 Pro SDK profile 路径
+          type: string
+  debugOption:
+    openAPIV3Schema:
+      description: 调试选项结构，不会影响业务行为，只会留下额外的调试信息
+      properties:
+        logPictureWhenDetecting:
+          default: false
+          description: 如果是，则识别能力在运行时会将图片和识别结果保存到本地
+          type: bool
+      type: object
+tasks:
+- taskName: get_robot_state
+  taskType: 0
+  abilityRole: robot
+  actionType: robot.get_state
+  schemaVersion: 2
+  summary: 读取机器人状态单项观测（按 observation 指定；读取 snapshot 时返回 kind=robot.state 的语义观测）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: observation
+    type: string
+    optional: false
+    description: 要读取的状态观测项名称，可选值：snapshot / torso_status / floating_base / transformer_martix
+  returns:
+  - name: None
+    type: object
+    description: 同步任务完成后的执行记录，observations 为单条目（source/name/data；snapshot 的 data 为 kind=robot.state 语义观测），示例 {"invocation_id":"o1","task_name":"get_robot_state","status":"completed"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（completed/failed）
+          observations:
+            type: array
+            description: 该观测项条目（source/name/data）
+          result:
+            type: object
+            description: 同步任务结果
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: get_sensors_state
+  taskType: 1
+  abilityRole: robot
+  actionType: robot.get_sensors_state
+  schemaVersion: 2
+  summary: 读取传感器数据单项观测（末端位姿/夹爪/关节/力/底盘/定位）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: observation
+    type: string
+    optional: false
+    description: 要读取的传感器观测项名称，可选值：ee_pose_left / ee_pose_right / gripper_state_left / gripper_state_right / joint_state_left / joint_state_right / force_data / torso_positions / chassis_feedback / localization
+  returns:
+  - name: None
+    type: object
+    description: 同步任务完成后的执行记录，observations 为该观测项的单条目，示例 {"invocation_id":"o2","task_name":"get_sensors_state","status":"completed"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（completed/failed）
+          observations:
+            type: array
+            description: 该观测项条目（source/name/data）
+          result:
+            type: object
+            description: 同步任务结果
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: capture_rgbd
+  taskType: 2
+  abilityRole: robot
+  actionType: robot.capture_rgbd
+  schemaVersion: 2
+  summary: 采集 RGB 与/或深度；RGB 保存 JPEG 并返回供 Pilot 发布的 Artifact 候选
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: sensor_id
+    type: string
+    optional: false
+    description: 传感器 ID，如 camera_head
+  - name: axis
+    type: string
+    optional: true
+    default: rgb
+    description: 采集通道，可选 rgb / depth / both，默认 rgb
+  returns:
+  - name: None
+    type: object
+    description: 同步任务完成后的执行记录，RGB observations 为 kind=sensor.frame 观测，result.artifact_candidates 包含交换目录内相对路径和 image/jpeg；深度仍为元数据。RGB 采集要求进程配置 SEMANTIC_ABILITY_ARTIFACT_ROOT，并与 Pilot 共用目录，示例 {"invocation_id":"o3","task_name":"capture_rgbd","status":"completed"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（completed/failed）
+          observations:
+            type: array
+            description: RGB 为 sensor.frame（value 为图片候选，evidence_refs 由 Pilot 发布后填充）；depth 为元信息；保留 sensor_id/encoding/frame_id
+          result:
+            type: object
+            description: 同步任务结果
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: GetExecution
+  taskType: 3
+  summary: 查询本 Ability 启动的语义执行
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"o1","status":"running",...},"message":"查询执行记录"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          command_id:
+            type: string
+            description: 底层命令 ID
+          progress:
+            type: float
+            description: 执行进度
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: StopExecution
+  taskType: 4
+  summary: 停止底层命令并让相关资源进入 hold
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  - name: reason
+    type: string
+    optional: true
+    description: 停止原因（可选，默认为 pilot stop）
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"o1","status":"stopped",...},"message":"停止底层命令"}
+    properties:
+      output:
+        type: object
+        description: 停止后的执行记录
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（stopped/interrupted）
+          phase:
+            type: string
+            description: 停止阶段（held/stop_unconfirmed）
+      message:
+        type: string
+        description: 任务执行说明

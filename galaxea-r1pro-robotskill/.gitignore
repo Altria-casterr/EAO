@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Temporary repair snapshots are kept out of source control.
+.repair-backups/
+
+# Generated skill packages and execution evidence
+outputs/
+*.zip
+*.tgz
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+# Local YOLO runtime installations, captures, and backups
+yolo_runtime/framework/
+yolo_runtime/replay-framework/
+yolo_runtime/replay-package/
+yolo_runtime/before-suite-*/
+yolo_runtime/suite-reference-*/
+yolo_runtime/*.jpg
+yolo_runtime/*-20260928*.json
+yolo_runtime/camera-probe.json
+yolo_runtime/latest-*.txt
+yolo_runtime/manual-yaw*.json
+yolo_runtime/rgb-detection.json
+yolo_runtime/tf-tree-current.json
+yolo_runtime/yaw-*.json
+*.before-*

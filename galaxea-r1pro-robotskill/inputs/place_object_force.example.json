@@ -1,0 +1,97 @@
+{
+  "target": {
+    "object_ref": "box-example",
+    "world_frame": "map",
+    "position_m": [
+      2.045,
+      -1.835,
+      1.26
+    ],
+    "size": {
+      "long_m": 0.53,
+      "width_m": 0.41,
+      "height_m": 0.34
+    }
+  },
+  "put_mode": "left",
+  "relative_frame": "torso_link4",
+  "force_phase_pause_s": 0.5,
+  "preposition": {
+    "x_offset_m": -0.03,
+    "z_offset_m": 0.07,
+    "grasp_center_offset_m": [
+      0.07,
+      0.0,
+      0.0
+    ]
+  },
+  "y_force": {
+    "force_threshold_n": 1.5,
+    "force_coordinate": [
+      "x"
+    ],
+    "max_distance_m": 0.01,
+    "timeout_s": 30.0,
+    "step_size_m": 0.01,
+    "loop_freq_s": 0.1
+  },
+  "retract": {
+    "lower_m": 0.05,
+    "minimum_outward_m": 0.1,
+    "backward_m": 0.1,
+    "safe_offset_z": 0.15
+  },
+  "approach_motion": {
+    "pos_tol": 0.03,
+    "orient_tol": 0.1,
+    "timeout": 10.0,
+    "loop_freq": 0.1,
+    "num_points": null,
+    "max_num_points": 100,
+    "speed": 0.05,
+    "sequential": true,
+    "axis_order": "zyx",
+    "step_distance": 0.05
+  },
+  "retract_motion": {
+    "pos_tol": 0.01,
+    "orient_tol": 0.1,
+    "timeout": 10.0,
+    "loop_freq": 0.1,
+    "num_points": null,
+    "max_num_points": 100,
+    "speed": 0.03,
+    "sequential": true,
+    "axis_order": "yzx",
+    "step_distance": 0.05
+  },
+  "motion": {
+    "pos_tol": 0.05,
+    "fine_pos_tol": 0.0005,
+    "orient_tol": 0.1,
+    "timeout": 10.0,
+    "step_timeout_s": 2.0,
+    "loop_freq": 0.1,
+    "num_points": 20,
+    "speed": 0.03,
+    "sequential": true,
+    "step_distance": 0.05
+  },
+  "torso": {
+    "enabled": false,
+    "positions": [
+      0.75,
+      -1.5,
+      -0.75,
+      0.0
+    ],
+    "timeout": 10.0,
+    "tol": 0.02,
+    "speeds": [
+      0.5,
+      0.8,
+      0.7,
+      0.7
+    ]
+  }
+}

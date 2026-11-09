@@ -1,0 +1,17 @@
+{
+  "navigation_purpose": "approach_grasp",
+  "mode": "right",
+  "target": {
+    "target_ref": "box-001",
+    "position_m": [
+      2.045,
+      0.685,
+      1.26
+    ],
+    "yaw_rad": 0
+  },
+  "frame_id": "map",
+  "target_point_type": 0,
+  "timeout": 60,
+  "move_y_m": 0.15
+}

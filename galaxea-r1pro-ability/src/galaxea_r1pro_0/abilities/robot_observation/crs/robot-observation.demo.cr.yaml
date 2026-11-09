@@ -1,0 +1,23 @@
+kind: AtomAbility
+metadata:
+  name: robot-observation-demo
+spec:
+  abilityName: RobotObservation.Demo
+  package: robot.observation.demo
+  version: 1.0.0
+  position: localhost
+  config:
+    robotProfilePath: /home/morefine/ws/SEMF/workspace/semantic-ability/galaxea-r1pro-ability/src/galaxea_r1pro_0/config/r1pro-real.json
+  tasks:
+    - taskType: 0
+      taskName: get_robot_state
+    - taskType: 1
+      taskName: get_sensors_state
+    - taskType: 2
+      taskName: capture_rgbd
+    - taskType: 3
+      taskName: GetExecution
+    - taskType: 4
+      taskName: StopExecution
+  autoStart: false
+  singleton: false

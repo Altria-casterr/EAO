@@ -1,0 +1,22 @@
+{
+  "robot_id": "r1pro-1.0",
+  "backend": "real",
+  "firmware_profile": "vendor-2026.08",
+  "namespace": "r1pro-1.0",
+  "endpoint": "ws://172.16.70.147:9091",
+  "options": {
+    "test_mode": false,
+    "defer_commands": false,
+    "stop_confirmed": true,
+    "camera_topics": {
+      "head_camera": {
+        "rgb8": "/camera/camera/color/image_raw/compressed",
+        "32FC1": "/camera/camera/aligned_depth_to_color/image_raw/compressedDepth"
+      }
+    },
+    "camera_topic_types": {
+      "/camera/camera/color/image_raw/compressed": "sensor_msgs/msg/CompressedImage",
+      "/camera/camera/aligned_depth_to_color/image_raw/compressedDepth": "sensor_msgs/msg/CompressedImage"
+    }
+  }
+}

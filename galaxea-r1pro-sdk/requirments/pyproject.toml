@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "r1pro-robot-sdk"
+version = "0.1.0.dev0"
+description = "R1 Pro 真机与仿真后端的进程内 Robot SDK"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Semantic Team" }]
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["../src"]
+include = ["galaxea_r1pro*"]
+

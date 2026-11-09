@@ -1,0 +1,19 @@
+{
+  "robot_id": "r1pro-real-yolo",
+  "backend": "real",
+  "firmware_profile": "real-v1",
+  "endpoint": "ws://172.16.70.147:9091",
+  "options": {
+    "test_mode": false,
+    "camera_topics": {
+      "head_camera": {
+        "rgb8": "/camera/camera/color/image_raw/compressed",
+        "32FC1": "/camera/camera/aligned_depth_to_color/image_raw/compressedDepth"
+      }
+    },
+    "camera_topic_types": {
+      "/camera/camera/aligned_depth_to_color/image_raw/compressedDepth": "sensor_msgs/msg/CompressedImage",
+      "/camera/camera/color/image_raw/compressed": "sensor_msgs/msg/CompressedImage"
+    }
+  }
+}

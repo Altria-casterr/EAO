@@ -1,0 +1,51 @@
+{
+  "defaults": {
+    "yolo_detect": "sam-yolo-waic"
+  },
+  "profiles": {
+    "sam-yolo-waic": {
+      "ability_role": "yolo_detect",
+      "provider": "ultralytics",
+      "enabled": true,
+      "settings": {
+        "checkpoint_path": "/home/morefine/ws/SEMF/workspace/semantic-robotsdk/galaxea-r1pro-sdk/src/galaxea_r1pro/galaxea_r1pro_0/utils/yolo11x-seg_for_WAIC_0715.pt",
+        "device": "cpu",
+        "imgsz": 640,
+        "conf_threshold": 0.5,
+        "iou_threshold": 0.5
+      }
+    }
+  },
+  "cameras": {
+    "head_camera": {
+      "camera_frame": "camera_color_optical_frame",
+      "base_frame": "torso_link4",
+      "robot_frame": "torso_link4",
+      "camera_intrinsics": {
+        "fx": 386.28,
+        "fy": 385.82,
+        "cx": 324.79,
+        "cy": 241.47
+      },
+      "depth_scale": 0.001,
+      "camera_extrinsics": {
+        "camera_to_tcp": [
+          0.0,
+          0.0,
+          0.0,
+          -1.5708,
+          0.0,
+          -1.5708
+        ],
+      "tcp_to_base": [
+          100,
+          -20,
+          660,
+          -0.0349,
+          0.698,
+          -0.0
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+api_version: 1
+
+robot:
+  id: "r1pro-galaxea-real"
+  display_name: "R1 Pro Galaxea Real - Bilateral Grasp Test"
+  model: "r1pro"
+  backend: "real"
+  sdk:
+    package: "semantic-robot-sdk-r1pro"
+    firmware_profile: "fake-v1"
+    providers:
+      kinematics: fake
+      motion: local
+      navigation: local
+    options:
+      auto_complete: true
+      stop_confirmed: true
+  frames:
+    world: world
+    base: base_link
+    end_effectors:
+      left: "left_tote_load_frame"
+      right: "right_tote_load_frame"
+  safety:
+    maximum_base_speed: 0.4
+    maximum_joint_speed: 0.5
+
+ability_framework:
+  endpoint: "http://127.0.0.1:8080"
+  managed_by_instance: false
+
+# 只绑定 grasp-object-bilateral 使用的四个角色，避免无关 Ability 的角色冲突。
+# instance_id 来自 2026-10-05 /api/ability-heartbeat 中 Running 的实例；Ability
+# 重新激活后 UUID 会改变，届时需用 /api/ability-heartbeat 更新这里。
+abilities:
+  robot:                # RobotObservation.Demo
+    instance_id: "4171b26f-ab5a-4108-9776-6362f84ac08c"
+  torso:                # TorsoControl.Demo
+    instance_id: "ab58a7af-376a-4818-b38e-ecfb584989e8"
+  perception:           # YoloDetect.Demo
+    instance_id: "f37776a7-8bdb-494f-baa2-5afd7b3d841a"
+  manipulator_motion:   # JointEEFPoseControl.Demo
+    instance_id: "d9fc2922-45b8-4362-8373-de24976a66c4"
+
+pilot:
+  id: "pilot-grasp-bilateral-test"
+  worker_timeout_seconds: 300
+  heartbeat_interval_seconds: 2
+  allow_ability_debug: true

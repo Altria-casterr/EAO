@@ -1,0 +1,14 @@
+{
+  "_comment": "Claude Code / OpenClaw .mcp.json template. Drop at project root as .mcp.json (or merge with existing). Adjust the python path. For other clients see examples/clients.md.",
+  "mcpServers": {
+    "ability-framework-native": {
+      "command": "${workspaceFolder}/ability-mcp-server/.venv/bin/python",
+      "args": [
+        "-m",
+        "ability_mcp.native",
+        "--framework-url",
+        "http://localhost:8080"
+      ]
+    }
+  }
+}

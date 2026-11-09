@@ -1,0 +1,22 @@
+kind: AtomAbility
+metadata:
+  name: gripper-demo
+spec:
+  abilityName: Gripper.Demo
+  package: gripper.demo
+  version: 1.0.0
+  position: localhost
+  config:
+    robotProfilePath: /home/morefine/ws/SEMF/workspace/semantic-ability/galaxea-r1pro-ability/src/galaxea_r1pro_0/config/r1pro-real.json
+  tasks:
+    - taskType: 0
+      taskName: HandleSingleGripper
+    - taskType: 1
+      taskName: HandleBothGripper
+    - taskType: 2
+      taskName: GetExecution
+    - taskType: 3
+      taskName: StopExecution
+  autoStart: false
+  singleton: false
+

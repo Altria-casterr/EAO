@@ -1,0 +1,122 @@
+{
+  "defaults": {
+    "yolo_detect": "sam-yolo-waic",
+    "grasp_planning": "fake-grasp-default",
+    "policy_control": "fake-policy-default"
+  },
+  "profiles": {
+    "fake-perception-default": {
+      "ability_role": "yolo_detect",
+      "provider": "fake",
+      "enabled": true,
+      "settings": {}
+    },
+    "fake-perception-alt": {
+      "ability_role": "yolo_detect",
+      "provider": "fake",
+      "enabled": true,
+      "settings": {
+        "variant": "alternative"
+      }
+    },
+    "fake-grasp-default": {
+      "ability_role": "grasp_planning",
+      "provider": "fake",
+      "enabled": true,
+      "settings": {}
+    },
+    "fake-policy-default": {
+      "ability_role": "policy_control",
+      "provider": "fake",
+      "enabled": true,
+      "settings": {}
+    },
+    "sam-yolo-waic": {
+      "ability_role": "yolo_detect",
+      "provider": "ultralytics",
+      "enabled": true,
+      "settings": {
+        "checkpoint_path": "/home/morefine/ws/SEMF/workspace/semantic-robotsdk/galaxea-r1pro-sdk/src/galaxea_r1pro/galaxea_r1pro_0/utils/yolo11x-seg_for_WAIC_0715.pt",
+        "device": "cpu",
+        "imgsz": 640
+      }
+    }
+  },
+  "cameras": {
+    "head_camera": {
+      "camera_frame": "camera_color_optical_frame",
+      "base_frame": "body",
+      "robot_frame": "body",
+      "camera_intrinsics": {
+        "fx": 387.5166015625,
+        "fy": 386.9667053222656,
+        "cx": 320.3348388671875,
+        "cy": 243.08682250976562
+      },
+      "depth_scale": 0.001,
+      "camera_extrinsics": {
+        "camera_to_tcp": [
+          0,
+          0,
+          0,
+          -1.5707963267948966,
+          0,
+          -1.5707963267948966
+        ],
+        "tcp_to_base": [
+          150,
+          -50,
+          570,
+          0,
+          0.6981317007977318,
+          0
+        ]
+      }
+    },
+    "left_wrist_camera": {
+      "camera_frame": "left_wrist_color_optical_frame",
+      "base_frame": "base_link",
+      "robot_frame": "base_link",
+      "camera_intrinsics": {
+        "fx": null,
+        "fy": null,
+        "cx": null,
+        "cy": null
+      },
+      "depth_scale": 0.001,
+      "camera_extrinsics": {
+        "camera_to_tcp": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "tcp_frame": "left_tcp_link"
+      }
+    },
+    "external_camera": {
+      "camera_frame": "external_color_optical_frame",
+      "base_frame": "base_link",
+      "robot_frame": "base_link",
+      "camera_intrinsics": {
+        "fx": null,
+        "fy": null,
+        "cx": null,
+        "cy": null
+      },
+      "depth_scale": 0.001,
+      "camera_extrinsics": {
+        "camera_to_base": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  }
+}

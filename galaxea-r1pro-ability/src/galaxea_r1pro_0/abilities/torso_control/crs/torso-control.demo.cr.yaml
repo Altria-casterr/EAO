@@ -1,0 +1,21 @@
+kind: AtomAbility
+metadata:
+  name: torso-control-demo
+spec:
+  abilityName: TorsoControl.Demo
+  package: torso.control.demo
+  version: 1.0.0
+  position: localhost
+  config:
+    robotProfilePath: /home/morefine/ws/SEMF/workspace/semantic-ability/galaxea-r1pro-ability/src/galaxea_r1pro_0/config/r1pro-real.json
+  tasks:
+    - taskType: 0
+      taskName: control_torso_joints
+    - taskType: 1
+      taskName: control_single_torso_joint
+    - taskType: 2
+      taskName: GetExecution
+    - taskType: 3
+      taskName: StopExecution
+  autoStart: false
+  singleton: false

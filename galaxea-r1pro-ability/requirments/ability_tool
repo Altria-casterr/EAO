@@ -1,0 +1,804 @@
+#!/usr/bin/env python3
+import sys
+import json
+import urllib.request
+import os
+import subprocess
+import shutil
+import time
+import zipfile
+import glob as glob_module
+
+def list_packages():
+    """列出所有已安装的能力包"""
+    url = "http://localhost:8080/api/cr"
+    try:
+        with urllib.request.urlopen(url) as response:
+            data = json.load(response)
+            for c in data:
+                name = c["metadata"]["name"]
+                ability = c["spec"]["abilityName"]
+                print(f"  {name} -> {ability}")
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def upload_package(package_name):
+    """上传能力包"""
+    # 检查文件是否存在
+    if not os.path.exists(package_name):
+        print(f"Error: File '{package_name}' not found", file=sys.stderr)
+        sys.exit(1)
+    
+    url = "http://localhost:8080/api/package"
+    
+    try:
+        # 读取文件内容
+        with open(package_name, 'rb') as f:
+            package_data = f.read()
+        
+        # 创建POST请求
+        req = urllib.request.Request(
+            url,
+            data=package_data,
+            method='POST'
+        )
+        req.add_header('Content-Type', 'application/zip')
+        
+        # 发送请求并获取响应
+        with urllib.request.urlopen(req) as response:
+            status_code = response.getcode()
+            response_data = response.read().decode('utf-8')
+            
+            print(f"Status Code: {status_code}")
+            if response_data:
+                try:
+                    # 尝试解析JSON响应
+                    json_response = json.loads(response_data)
+                    print("Response:")
+                    print(json.dumps(json_response, indent=2))
+                except json.JSONDecodeError:
+                    # 如果不是JSON，直接打印
+                    print("Response:")
+                    print(response_data)
+            else:
+                print("Upload successful (no response body)")
+                
+    except urllib.error.HTTPError as e:
+        print(f"HTTP Error: {e.code} {e.reason}", file=sys.stderr)
+        error_body = e.read().decode('utf-8')
+        if error_body:
+            print(f"Error Response: {error_body}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def delete_package(package_name):
+    """删除指定的能力包
+    
+    将类似 mock-grasp-demo 的名称转换为 mock.grasp.demo 格式
+    执行命令类似于: curl -X DELETE http://localhost:8080/api/package/mock.arm.demo/1.0.0
+    """
+    # 转换包名格式：将连字符转换为点号
+    # 例如: mock-grasp-demo -> mock.grasp.demo
+    converted_name = package_name.replace('-', '.')
+    
+    # 默认版本号为 1.0.0
+    version = "1.0.0"
+    
+    url = f"http://localhost:8080/api/package/{converted_name}/{version}"
+    
+    try:
+        print(f"Deleting package: {package_name}")
+        print(f"Converted name: {converted_name}")
+        print(f"Version: {version}")
+        print(f"URL: {url}")
+        print()
+        
+        # 创建DELETE请求
+        req = urllib.request.Request(url, method='DELETE')
+        
+        # 发送请求并获取响应
+        with urllib.request.urlopen(req) as response:
+            status_code = response.getcode()
+            response_data = response.read().decode('utf-8')
+            
+            print(f"Status Code: {status_code}")
+            print(f"✓ Package '{package_name}' deleted successfully")
+            
+            if response_data:
+                try:
+                    json_response = json.loads(response_data)
+                    print("Response:")
+                    print(json.dumps(json_response, indent=2))
+                except json.JSONDecodeError:
+                    print("Response:")
+                    print(response_data)
+            
+    except urllib.error.HTTPError as e:
+        print(f"HTTP Error: {e.code} {e.reason}", file=sys.stderr)
+        error_body = e.read().decode('utf-8')
+        if error_body:
+            print(f"Error Response: {error_body}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error deleting package: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def generate_package_name(filename):
+    """根据文件名生成默认的包名
+    
+    将类似 Mock-EEF 的名称转换为 mock.eef.demo-1.0.0 格式
+    """
+    # 移除路径前缀，只保留目录名
+    base_name = os.path.basename(filename.rstrip('/'))
+    
+    # 将连字符和下划线转换为点号，并转为小写
+    parts = base_name.replace('-', '.').replace('_', '.').lower().split('.')
+    
+    # 过滤空字符串
+    parts = [p for p in parts if p]
+    
+    if not parts:
+        return "unknown.demo-1.0.0"
+    
+    # 构建包名：第一部分.第二部分.demo-1.0.0
+    if len(parts) >= 2:
+        package_base = '.'.join(parts[:2])
+    else:
+        package_base = parts[0]
+    
+    return f"{package_base}.demo-1.0.0"
+
+def pack_ability(filename, output_name=None):
+    """打包能力项目为zip文件"""
+    # 检查源目录是否存在
+    if not os.path.exists(filename):
+        print(f"Error: Directory '{filename}' not found", file=sys.stderr)
+        sys.exit(1)
+    
+    if not os.path.isdir(filename):
+        print(f"Error: '{filename}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+    
+    # 生成输出文件名
+    if output_name is None:
+        output_name = generate_package_name(filename)
+        print(f"Auto-generated package name: {output_name}")
+    
+    # 确保输出文件名以 .zip 结尾
+    if not output_name.endswith('.zip'):
+        output_name += '.zip'
+    
+    try:
+        print(f"Packing '{filename}' into '{output_name}'...")
+        
+        # 创建zip文件
+        with zipfile.ZipFile(output_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # 遍历目录中的所有文件和子目录
+            for root, dirs, files in os.walk(filename):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    # 计算在zip中的相对路径
+                    arcname = os.path.relpath(file_path, os.path.dirname(filename))
+                    
+                    # 添加到zip文件
+                    zipf.write(file_path, arcname)
+                    print(f"  Added: {arcname}")
+        
+        # 显示文件大小
+        file_size = os.path.getsize(output_name)
+        if file_size < 1024:
+            size_str = f"{file_size} bytes"
+        elif file_size < 1024 * 1024:
+            size_str = f"{file_size / 1024:.2f} KB"
+        else:
+            size_str = f"{file_size / (1024 * 1024):.2f} MB"
+        
+        print(f"\n✓ Package created successfully!")
+        print(f"  File: {output_name}")
+        print(f"  Size: {size_str}")
+        
+    except Exception as e:
+        print(f"Error packing ability: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def create_framework():
+    """在当前目录下创建framework文件夹并配置"""
+    current_dir = os.getcwd()
+    framework_dir = os.path.join(current_dir, "framework")
+    
+    try:
+        # 创建framework目录
+        print("Creating framework directory...")
+        os.makedirs(framework_dir, exist_ok=True)
+        print(f"✓ Created directory: {framework_dir}")
+        
+        # 查找AbilityFramework可执行文件（假设在当前目录或上级目录）
+        ability_framework_src = None
+        search_paths = [
+            os.path.join(current_dir, "AbilityFramework"),
+            os.path.join(os.path.dirname(current_dir), "AbilityFramework"),
+        ]
+        
+        for path in search_paths:
+            if os.path.exists(path):
+                ability_framework_src = path
+                break
+        
+        if ability_framework_src is None:
+            print("Warning: AbilityFramework executable not found in current or parent directory", file=sys.stderr)
+            print("Please manually copy AbilityFramework to the framework directory", file=sys.stderr)
+        else:
+            # 复制AbilityFramework到framework目录
+            dest_path = os.path.join(framework_dir, "AbilityFramework")
+            shutil.copy2(ability_framework_src, dest_path)
+            os.chmod(dest_path, 0o755)
+            print(f"✓ Copied AbilityFramework to {dest_path}")
+            print(f"✓ Set executable permission")
+        
+        # 创建config.yaml配置文件
+        config_content = """framework_name: playground
+http_ip: 0.0.0.0
+http_port: 8080
+
+log:
+  glog:
+    color_log: true
+    also_log_to_stderr: true
+    max_log_size: 1024
+    stop_logging_if_full_disk: true
+    log_dir: log
+
+resource_mgr:
+  update_interval: 5
+
+lifecycle_mgr:
+  clear_stale_heartbeats_interval: 10
+"""
+        
+        config_path = os.path.join(framework_dir, "config.yaml")
+        with open(config_path, 'w') as f:
+            f.write(config_content)
+        print(f"✓ Created config.yaml at {config_path}")
+        
+        print("\nFramework created successfully!")
+        print(f"Location: {framework_dir}")
+        
+    except Exception as e:
+        print(f"Error creating framework: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def remove_framework():
+    """删除当前目录下的framework文件夹"""
+    current_dir = os.getcwd()
+    framework_dir = os.path.join(current_dir, "framework")
+    
+    try:
+        if not os.path.exists(framework_dir):
+            print(f"Framework directory not found at {framework_dir}")
+            return
+        
+        print(f"Removing framework directory: {framework_dir}")
+        shutil.rmtree(framework_dir)
+        print(f"✓ Framework directory removed successfully")
+        
+    except PermissionError:
+        print(f"Error: Permission denied when removing {framework_dir}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error removing framework: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def activate_instance(instance_name, index_id=0):
+    """启动能力框架的实例"""
+    url_create = "http://localhost:8080/api/instance"
+    url_list = "http://localhost:8080/api/instance"
+    
+    try:
+        # 创建实例
+        print(f"Creating instance with template: {instance_name}...")
+        payload = json.dumps({
+            "template": instance_name,
+            "start": True,
+            "connect": True
+        }).encode('utf-8')
+        
+        req = urllib.request.Request(
+            url_create,
+            data=payload,
+            method='POST'
+        )
+        req.add_header('Content-Type', 'application/json')
+        
+        with urllib.request.urlopen(req) as response:
+            create_response = json.load(response)
+            task_id = create_response.get("taskId", "N/A")
+            print(f"Task ID: {task_id}")
+            print(json.dumps(create_response, indent=2))
+        
+        # 等待实例状态变为 Running
+        print(f"\nWaiting for instance to reach Running state...")
+        running_state = False
+        
+        for i in range(30):
+            try:
+                with urllib.request.urlopen(url_list) as response:
+                    instances = json.load(response)
+                    
+                    if not instances or len(instances) <= index_id:
+                        print(f"  Attempt {i+1}/30: Instance not found yet...")
+                        time.sleep(1)
+                        continue
+                    
+                    instance = instances[index_id]
+                    state = instance.get("state", "unknown")
+                    print(f"  Attempt {i+1}/30: state={state}")
+                    
+                    if state == "Running":
+                        running_state = True
+                        break
+                        
+            except Exception as e:
+                print(f"  Attempt {i+1}/30: Error checking state: {e}")
+            
+            time.sleep(1)
+        
+        if not running_state:
+            print("\nWarning: Instance did not reach Running state within 30 seconds", file=sys.stderr)
+        
+        # 获取实例 ID
+        with urllib.request.urlopen(url_list) as response:
+            instances = json.load(response)
+            
+            if instances and len(instances) > index_id:
+                instance = instances[index_id]
+                instance_id = instance.get("instance_id", "N/A")
+                state = instance.get("state", "N/A")
+                
+                print(f"\n{'=' * 60}")
+                print(f"Instance activated successfully!")
+                print(f"  Instance ID: {instance_id}")
+                print(f"  State: {state}")
+                print(f"  Index: {index_id}")
+                print(f"{'=' * 60}")
+            else:
+                print(f"\nError: Could not find instance at index {index_id}", file=sys.stderr)
+                sys.exit(1)
+                
+    except urllib.error.HTTPError as e:
+        print(f"HTTP Error: {e.code} {e.reason}", file=sys.stderr)
+        error_body = e.read().decode('utf-8')
+        if error_body:
+            print(f"Error Response: {error_body}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error activating instance: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def activate_framework():
+    """启动能力框架（前台运行）"""
+    current_dir = os.getcwd()
+    framework_dir = os.path.join(current_dir, "framework")
+    framework_executable = os.path.join(framework_dir, "AbilityFramework")
+    
+    try:
+        # 检查framework目录和可执行文件是否存在
+        if not os.path.exists(framework_dir):
+            print(f"Error: Framework directory not found at {framework_dir}", file=sys.stderr)
+            print("Please run 'ability_tool framework create' first", file=sys.stderr)
+            sys.exit(1)
+        
+        if not os.path.exists(framework_executable):
+            print(f"Error: AbilityFramework executable not found at {framework_executable}", file=sys.stderr)
+            sys.exit(1)
+        
+        # 退出venv环境（如果存在）
+        venv_path = os.environ.get('VIRTUAL_ENV')
+        if venv_path:
+            print(f"Deactivating virtual environment: {venv_path}")
+            subprocess.run(['bash', '-c', 'deactivate'], check=False)
+        
+        # 启动AbilityFramework（前台运行，持续输出日志）
+        print(f"Starting AbilityFramework from {framework_dir}...")
+        print("=" * 60)
+        print("AbilityFramework is running. Press Ctrl+C to stop.")
+        print("=" * 60)
+        
+        # 使用subprocess.run在前台运行，直接继承标准输入输出
+        subprocess.run(
+            ['./AbilityFramework'],
+            cwd=framework_dir,
+            check=False
+        )
+        
+    except FileNotFoundError:
+        print(f"Error: AbilityFramework executable not found or not executable", file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n\nAbilityFramework stopped by user.")
+    except Exception as e:
+        print(f"Error starting framework: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def list_instances():
+    """列出所有已启动的实例"""
+    url = "http://localhost:8080/api/instance"
+    heartbeat_url = "http://localhost:8080/api/ability-heartbeat"
+
+    try:
+        with urllib.request.urlopen(url) as response:
+            instances = json.load(response)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # 同时拉取 heartbeat 获取端口信息
+    heartbeat_map = {}
+    try:
+        with urllib.request.urlopen(heartbeat_url) as response:
+            heartbeats = json.load(response)
+            for hb in heartbeats:
+                heartbeat_map[hb.get("id", "")] = hb
+    except Exception:
+        pass
+
+    if not instances:
+        print("No running instances.")
+        return
+
+    print(f"{'Index':<6} {'Instance ID':<38} {'Ability Name':<30} {'State':<12} {'Port':<6}")
+    print("-" * 92)
+    for i, inst in enumerate(instances):
+        inst_id = inst.get("instance_id", "N/A")
+        ability_name = inst.get("ability_name", "N/A")
+        state = inst.get("state", "unknown")
+        # 从 heartbeat 获取 abilityPort
+        hb = heartbeat_map.get(inst_id, {})
+        port = hb.get("abilityPort", inst.get("ability_port", 0))
+        port_str = str(port) if port else "-"
+        print(f"{i:<6} {inst_id:<38} {ability_name:<30} {state:<12} {port_str:<6}")
+
+
+def stop_instance(target):
+    """停止实例。target 可以是 instance_id (UUID) 或实例名称"""
+    # 先获取实例列表
+    url = "http://localhost:8080/api/instance"
+
+    try:
+        with urllib.request.urlopen(url) as response:
+            instances = json.load(response)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if not instances:
+        print("No running instances to stop.")
+        return
+
+    # 解析 target：是 UUID 还是名称/索引
+    instance_ids_to_stop = []
+
+    # 尝试按索引匹配
+    try:
+        idx = int(target)
+        if 0 <= idx < len(instances):
+            instance_ids_to_stop.append(instances[idx].get("instance_id"))
+        else:
+            print(f"Error: Index {idx} out of range (0-{len(instances)-1})", file=sys.stderr)
+            sys.exit(1)
+    except ValueError:
+        pass
+
+    # 尝试按 instance_id (UUID) 精确匹配
+    if not instance_ids_to_stop:
+        for inst in instances:
+            if inst.get("instance_id") == target:
+                instance_ids_to_stop.append(target)
+                break
+
+    # 尝试按 ability_name 模糊匹配（停止所有匹配的实例）
+    if not instance_ids_to_stop:
+        for inst in instances:
+            ability_name = inst.get("ability_name", "")
+            cr_name = inst.get("cr_name", "")
+            if target.lower() in ability_name.lower() or target.lower() in cr_name.lower():
+                instance_ids_to_stop.append(inst.get("instance_id"))
+
+    if not instance_ids_to_stop:
+        print(f"Error: No instance found matching '{target}'", file=sys.stderr)
+        print("Use 'ability_tool instance list' to see available instances.", file=sys.stderr)
+        sys.exit(1)
+
+    # 逐个终止
+    success_count = 0
+    for inst_id in instance_ids_to_stop:
+        delete_url = f"http://localhost:8080/api/instance/{inst_id}"
+        try:
+            req = urllib.request.Request(delete_url, method='DELETE')
+            with urllib.request.urlopen(req) as response:
+                status_code = response.getcode()
+                response_data = response.read().decode('utf-8')
+                print(f"✓ Stopped instance {inst_id} (HTTP {status_code})")
+                success_count += 1
+        except urllib.error.HTTPError as e:
+            print(f"✗ Failed to stop {inst_id}: HTTP {e.code} {e.reason}", file=sys.stderr)
+        except Exception as e:
+            print(f"✗ Failed to stop {inst_id}: {e}", file=sys.stderr)
+
+    print(f"\nStopped {success_count}/{len(instance_ids_to_stop)} instance(s).")
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage:", file=sys.stderr)
+        print("  ability_tool pack <dir1> [dir2] ...      - Pack multiple ability projects", file=sys.stderr)
+        print("  ability_tool list                      - List all packages", file=sys.stderr)
+        print("  ability_tool post <file1> [file2] ...  - Upload multiple packages", file=sys.stderr)
+        print("  ability_tool delete <packname>         - Delete a package (e.g., mock-grasp-demo)", file=sys.stderr)
+        print("  ability_tool framework create          - Create framework directory", file=sys.stderr)
+        print("  ability_tool framework activate        - Start AbilityFramework", file=sys.stderr)
+        print("  ability_tool framework remove          - Remove framework directory", file=sys.stderr)
+        print("  ability_tool instance list             - List all running instances", file=sys.stderr)
+        print("  ability_tool instance activate <name> [index] - Activate instance", file=sys.stderr)
+        print("  ability_tool instance stop <id|name|index>  - Stop an instance", file=sys.stderr)
+        print("  ability_tool activate <name> [index]   - Activate instance (shortcut)", file=sys.stderr)
+        print("  ability_tool instance                    - List all running instances (shortcut)", file=sys.stderr)
+        print("  ability_tool stop <id|name|index>      - Stop an instance (shortcut)", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Examples:", file=sys.stderr)
+        print("  ability_tool pack ./Mock-EEF", file=sys.stderr)
+        print("  ability_tool pack ./Mock-arm/ ./Mock-detect/", file=sys.stderr)
+        print("  ability_tool list", file=sys.stderr)
+        print("  ability_tool post mock.move.demo-1.0.0.zip", file=sys.stderr)
+        print("  ability_tool post mock.torso.demo-1.0.0.zip mock.navplanner.demo-1.0.0.zip", file=sys.stderr)
+        print("  ability_tool delete mock-grasp-demo", file=sys.stderr)
+        print("  ability_tool delete mock-arm-demo", file=sys.stderr)
+        print("  ability_tool framework create", file=sys.stderr)
+        print("  ability_tool framework activate", file=sys.stderr)
+        print("  ability_tool framework remove", file=sys.stderr)
+        print("  ability_tool instance activate mock-eef-demo", file=sys.stderr)
+        print("  ability_tool instance activate mock-eef-demo 1", file=sys.stderr)
+        print("  ability_tool instance", file=sys.stderr)
+        print("  ability_tool instance list", file=sys.stderr)
+        print("  ability_tool instance stop 0", file=sys.stderr)
+        print("  ability_tool stop mock-chassis-move-demo", file=sys.stderr)
+        print("  ability_tool activate mock-eef-demo", file=sys.stderr)
+        print("  ability_tool activate mock-eef-demo 1", file=sys.stderr)
+        sys.exit(1)
+    
+    command_type = sys.argv[1]
+    
+    # Handle top-level commands first
+    if command_type == "list":
+        list_packages()
+    elif command_type == "post":
+        if len(sys.argv) < 3:
+            print("Error: Missing package filename", file=sys.stderr)
+            print("Usage: ability_tool post <file1|dir|pattern> [file2|dir|pattern] ...", file=sys.stderr)
+            print("Examples:", file=sys.stderr)
+            print("  ability_tool post mock.move.demo-1.0.0.zip", file=sys.stderr)
+            print("  ability_tool post *.zip", file=sys.stderr)
+            print("  ability_tool post ./", file=sys.stderr)
+            sys.exit(1)
+        
+        # 支持上传多个文件、目录、通配符
+        raw_args = sys.argv[2:]
+        filenames = []
+        
+        for arg in raw_args:
+            if os.path.isdir(arg):
+                # 目录：扫描所有 .zip 文件
+                zips = sorted(glob_module.glob(os.path.join(arg, "*.zip")))
+                if zips:
+                    filenames.extend(zips)
+                else:
+                    print(f"Warning: No .zip files found in '{arg}'", file=sys.stderr)
+            elif any(c in arg for c in "*?["):
+                # 通配符模式
+                matched = sorted(glob_module.glob(arg))
+                if matched:
+                    filenames.extend(matched)
+                else:
+                    print(f"Warning: No files matched pattern '{arg}'", file=sys.stderr)
+            else:
+                filenames.append(arg)
+        
+        if not filenames:
+            print("Error: No files to upload", file=sys.stderr)
+            sys.exit(1)
+        
+        # 去重
+        seen = set()
+        unique_filenames = []
+        for f in filenames:
+            abs_f = os.path.abspath(f)
+            if abs_f not in seen:
+                seen.add(abs_f)
+                unique_filenames.append(f)
+        filenames = unique_filenames
+        
+        success_count = 0
+        fail_count = 0
+        
+        for i, filename in enumerate(filenames):
+            try:
+                print(f"\n{'=' * 60}")
+                print(f"Uploading {i + 1}/{len(filenames)}: {filename}")
+                print(f"{'=' * 60}")
+                upload_package(filename)
+                success_count += 1
+            except SystemExit:
+                fail_count += 1
+                print(f"\n✗ Failed to upload: {filename}\n", file=sys.stderr)
+        
+        print(f"\n{'=' * 60}")
+        print(f"Upload complete: {success_count} succeeded, {fail_count} failed")
+        print(f"{'=' * 60}")
+    elif command_type == "delete":
+        if len(sys.argv) < 3:
+            print("Error: Missing package name", file=sys.stderr)
+            print("Usage: ability_tool delete <packname>", file=sys.stderr)
+            print("Example: ability_tool delete mock-grasp-demo", file=sys.stderr)
+            sys.exit(1)
+        
+        package_name = sys.argv[2]
+        delete_package(package_name)
+    elif command_type == "pack":
+        if len(sys.argv) < 3:
+            print("Error: Missing directory path", file=sys.stderr)
+            print("Usage: ability_tool pack <directory1> [directory2] ...", file=sys.stderr)
+            sys.exit(1)
+        
+        # 打包功能，支持多个目录
+        directories = sys.argv[2:]
+        success_count = 0
+        fail_count = 0
+        
+        for directory in directories:
+            try:
+                output_name = generate_package_name(directory)
+                print(f"\n{'=' * 60}")
+                print(f"Packing {success_count + 1}/{len(directories)}: {directory}")
+                print(f"Output: {output_name}.zip")
+                print(f"{'=' * 60}")
+                pack_ability(directory, output_name + '.zip')
+                success_count += 1
+            except SystemExit:
+                fail_count += 1
+                print(f"\n✗ Failed to pack: {directory}\n", file=sys.stderr)
+        
+        print(f"\n{'=' * 60}")
+        print(f"Packing complete: {success_count} succeeded, {fail_count} failed")
+        print(f"{'=' * 60}")
+    
+    elif command_type == "package":
+        if len(sys.argv) < 3:
+            print("Error: Missing package command", file=sys.stderr)
+            print("Available commands: list, post", file=sys.stderr)
+            sys.exit(1)
+        
+        command = sys.argv[2]
+        
+        if command == "list":
+            list_packages()
+        elif command == "post":
+            if len(sys.argv) < 4:
+                print("Error: Missing package filename", file=sys.stderr)
+                print("Usage: ability_tool package post <file1> [file2] ...", file=sys.stderr)
+                sys.exit(1)
+            
+            # 支持上传多个文件
+            filenames = sys.argv[3:]
+            success_count = 0
+            fail_count = 0
+            
+            for i, filename in enumerate(filenames):
+                try:
+                    print(f"\n{'=' * 60}")
+                    print(f"Uploading {i + 1}/{len(filenames)}: {filename}")
+                    print(f"{'=' * 60}")
+                    upload_package(filename)
+                    success_count += 1
+                except SystemExit:
+                    fail_count += 1
+                    print(f"\n✗ Failed to upload: {filename}\n", file=sys.stderr)
+            
+            print(f"\n{'=' * 60}")
+            print(f"Upload complete: {success_count} succeeded, {fail_count} failed")
+            print(f"{'=' * 60}")
+        else:
+            print(f"Error: Unknown package command '{command}'", file=sys.stderr)
+            print("Available commands: list, post", file=sys.stderr)
+            sys.exit(1)
+    
+    elif command_type == "framework":
+        if len(sys.argv) < 3:
+            print("Error: Missing framework command", file=sys.stderr)
+            print("Available commands: create, activate, remove", file=sys.stderr)
+            sys.exit(1)
+        
+        command = sys.argv[2]
+        
+        if command == "create":
+            create_framework()
+        elif command == "activate":
+            activate_framework()
+        elif command == "remove":
+            remove_framework()
+        else:
+            print(f"Error: Unknown framework command '{command}'", file=sys.stderr)
+            print("Available commands: create, activate, remove", file=sys.stderr)
+            sys.exit(1)
+    
+    elif command_type == "instance":
+        if len(sys.argv) < 3:
+            list_instances()
+            return
+        
+        command = sys.argv[2]
+        
+        if command == "list":
+            list_instances()
+        elif command == "stop":
+            if len(sys.argv) < 4:
+                print("Error: Missing target", file=sys.stderr)
+                print("Usage: ability_tool instance stop <instance_id|name|index>", file=sys.stderr)
+                sys.exit(1)
+            stop_instance(sys.argv[3])
+        elif command == "activate":
+            if len(sys.argv) < 4:
+                print("Error: Missing instance name", file=sys.stderr)
+                print("Usage: ability_tool instance activate <instance_name> [index_id]", file=sys.stderr)
+                sys.exit(1)
+            
+            instance_name = sys.argv[3]
+            index_id = 0
+            
+            if len(sys.argv) >= 5:
+                try:
+                    index_id = int(sys.argv[4])
+                except ValueError:
+                    print(f"Error: Invalid index_id '{sys.argv[4]}', must be an integer", file=sys.stderr)
+                    sys.exit(1)
+            
+            activate_instance(instance_name, index_id)
+        else:
+            print(f"Error: Unknown instance command '{command}'", file=sys.stderr)
+            print("Available commands: list, activate, stop", file=sys.stderr)
+            sys.exit(1)
+    
+    elif command_type == "activate":
+        # 快捷方式：直接激活实例
+        if len(sys.argv) < 3:
+            print("Error: Missing instance name", file=sys.stderr)
+            print("Usage: ability_tool activate <instance_name> [index_id]", file=sys.stderr)
+            sys.exit(1)
+        
+        instance_name = sys.argv[2]
+        index_id = 0
+        
+        if len(sys.argv) >= 4:
+            try:
+                index_id = int(sys.argv[3])
+            except ValueError:
+                print(f"Error: Invalid index_id '{sys.argv[3]}', must be an integer", file=sys.stderr)
+                sys.exit(1)
+        
+        activate_instance(instance_name, index_id)
+    
+    elif command_type == "stop":
+        # 快捷方式：直接停止实例
+        if len(sys.argv) < 3:
+            print("Error: Missing target", file=sys.stderr)
+            print("Usage: ability_tool stop <instance_id|name|index>", file=sys.stderr)
+            sys.exit(1)
+        stop_instance(sys.argv[2])
+    
+    else:
+        print(f"Error: Unknown command type '{command_type}'", file=sys.stderr)
+        print("Available types: pack, package, framework, instance, activate, stop", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

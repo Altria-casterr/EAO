@@ -1,0 +1,599 @@
+abilityName: JointEEFPoseControl.Demo
+kind: AtomAbility
+schema:
+  config:
+    openAPIV3Schema:
+      description: 能力配置结构
+      properties:
+        robotProfilePath:
+          description: R1 Pro SDK profile 路径
+          type: string
+  debugOption:
+    openAPIV3Schema:
+      description: 调试选项结构，不会影响业务行为，只会留下额外的调试信息
+      properties:
+        logPictureWhenDetecting:
+          default: false
+          description: 如果是，则识别能力在运行时会将图片和识别结果保存到本地
+          type: bool
+      type: object
+tasks:
+- taskName: control_single_arm
+  taskType: 0
+  abilityRole: manipulator_motion
+  actionType: motion.move_end_effector_single
+  schemaVersion: 2
+  physical: true
+  summary: 控制单臂末端移动到目标位姿（发布目标后轮询当前位姿直到到位或超时，frame_id 不一致时先做坐标系转换）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: axis
+    type: string
+    optional: true
+    default: left
+    description: 执行臂侧，仅支持 left 或 right，默认 left
+  - name: _target_pose
+    type: object
+    optional: false
+    description: "末端目标位姿，必须包含全部键：target_x / target_y / target_z（位置，米）、x / y / z / w（姿态四元数 xyzw，零姿态为 [0,0,0,1]）"
+  - name: frame_id
+    type: string
+    optional: true
+    default: torso_link4
+    description: 目标位姿所在坐标系，默认 torso_link4
+  - name: pos_tol
+    type: float
+    optional: true
+    default: 0.05
+    description: 位置容差（米），默认 0.05
+  - name: orient_tol
+    type: float
+    optional: true
+    default: 0.01
+    description: 姿态容差（弧度），默认 0.01
+  - name: timeout
+    type: float
+    optional: true
+    default: 10.0
+    description: 运动超时时间，单位秒，默认 10.0
+  - name: loop_freq
+    type: float
+    optional: true
+    default: 1.0
+    description: 末端位姿轮询间隔，单位秒，默认 1.0
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"e1","task_name":"control_single_arm","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: control_both_arm
+  taskType: 1
+  abilityRole: manipulator_motion
+  actionType: motion.move_end_effector_both
+  schemaVersion: 2
+  physical: true
+  summary: 控制双臂末端同时移动到目标位姿（左右并行发布，两侧均到位才算成功）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: left_target_pose
+    type: object
+    optional: false
+    description: "左臂末端目标位姿，必须包含全部键：target_x / target_y / target_z（位置，米）、x / y / z / w（姿态四元数 xyzw）"
+  - name: right_target_pose
+    type: object
+    optional: false
+    description: "右臂末端目标位姿，键与 left_target_pose 相同"
+  - name: left_frame_id
+    type: string
+    optional: true
+    default: "1"
+    description: 左臂目标位姿所在坐标系，默认 1
+  - name: right_frame_id
+    type: string
+    optional: true
+    default: "1"
+    description: 右臂目标位姿所在坐标系，默认 1
+  - name: left_pos_tol
+    type: float
+    optional: true
+    default: 0.05
+    description: 左臂位置容差（米），默认 0.05
+  - name: left_orient_tol
+    type: float
+    optional: true
+    default: 0.01
+    description: 左臂姿态容差（弧度），默认 0.01
+  - name: right_pos_tol
+    type: float
+    optional: true
+    default: 0.05
+    description: 右臂位置容差（米），默认 0.05
+  - name: right_orient_tol
+    type: float
+    optional: true
+    default: 0.01
+    description: 右臂姿态容差（弧度），默认 0.01
+  - name: timeout
+    type: float
+    optional: true
+    default: 10.0
+    description: 左右共用运动超时时间，单位秒，默认 10.0
+  - name: loop_freq
+    type: float
+    optional: true
+    default: 1.0
+    description: 左右共用末端位姿轮询间隔，单位秒，默认 1.0
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"e2","task_name":"control_both_arm","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID（主记录：左臂）
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: force_align
+  taskType: 2
+  abilityRole: manipulator_motion
+  actionType: manipulation.force_align
+  schemaVersion: 2
+  physical: true
+  summary: 力反馈精调：当前末端位置和姿态先转换到 torso_link4，再沿指定轴按步长步进逼近，监测轴力变化触阈即停（同步闭环）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: axis
+    type: string
+    optional: true
+    default: left
+    description: 执行臂侧，仅支持 left 或 right，默认 left
+  - name: move_coordinate
+    type: string
+    optional: true
+    default: "y"
+    description: torso_link4 坐标系中的步进移动轴，取值 x / y / z，默认 y
+  - name: force_coordinate
+    type: array
+    items:
+      type: string
+    optional: true
+    default: [x, y, z]
+    description: 力反馈监测轴集合，取值 x / y / z，默认三轴全监测 [x, y, z]
+  - name: force_threshold_n
+    type: float
+    optional: false
+    description: 力变化阈值（牛），监测轴相对基线的力变化达到该值即停
+  - name: direction
+    type: string
+    optional: true
+    default: negative
+    description: torso_link4 坐标系中的步进方向，取值 negative（轴向负方向逼近）/ positive，默认 negative
+  - name: step_size_m
+    type: float
+    optional: true
+    default: 0.01
+    description: 单步步长（米），默认 0.01
+  - name: loop_freq_s
+    type: float
+    optional: true
+    default: 0.1
+    description: 控制周期（秒），力反馈采样与步进重发的间隔，默认 0.1
+  - name: timeout_s
+    type: float
+    optional: true
+    default: 10.0
+    description: 超时时间（秒），默认 10.0
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"e3","task_name":"force_align","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: control_single_arm_trajectory
+  taskType: 3
+  abilityRole: manipulator_motion
+  actionType: motion.move_end_effector_single_trajectory
+  schemaVersion: 2
+  physical: true
+  summary: 按笛卡尔五次多项式轨迹逐点控制单臂末端（每点发布后等待到位，含反馈闭环）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: axis
+    type: string
+    optional: true
+    default: left
+    description: 执行臂侧，仅支持 left 或 right，默认 left
+  - name: _target_pose
+    type: object
+    optional: false
+    description: "轨迹终点位姿，必须包含全部键：target_x / target_y / target_z（位置，米）、x / y / z / w（姿态四元数 xyzw）"
+  - name: frame_id
+    type: string
+    optional: true
+    default: torso_link4
+    description: 目标位姿所在坐标系，默认 torso_link4
+  - name: num_points
+    type: int
+    optional: true
+    default: 100
+    description: 轨迹插值点数，默认 100
+  - name: speed
+    type: float
+    optional: true
+    default: 0.05
+    description: 末端线速度（米/秒，仅用于日志），默认 0.05
+  - name: axis_order
+    type: string
+    optional: true
+    default: zyx
+    description: 顺序插值时的逐轴执行顺序，如 zyx / xyz，默认 zyx
+  - name: sequential
+    type: bool
+    optional: true
+    default: true
+    description: 是否逐轴顺序插值（false 时六维同步插值），默认 true
+  - name: step_distance
+    type: float
+    optional: true
+    default: 0.01
+    description: 自动计算点数时的步进距离（米），默认 0.01
+  - name: max_num_points
+    type: int
+    optional: true
+    default: 100
+    description: 插值点数上限，默认 100
+  - name: pos_tol
+    type: float
+    optional: true
+    default: 0.05
+    description: 单点位置容差（米），默认 0.05
+  - name: orient_tol
+    type: float
+    optional: true
+    default: 0.01
+    description: 单点姿态容差（弧度），默认 0.01
+  - name: timeout
+    type: float
+    optional: true
+    default: 10.0
+    description: 单点超时时间，单位秒，默认 10.0
+  - name: loop_freq
+    type: float
+    optional: true
+    default: 1.0
+    description: 单点轮询间隔，单位秒，默认 1.0
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"e4","task_name":"control_single_arm_trajectory","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID（最后一个轨迹点）
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: control_both_arms_trajectory
+  taskType: 4
+  abilityRole: manipulator_motion
+  actionType: motion.move_end_effector_both_trajectory
+  schemaVersion: 2
+  physical: true
+  summary: 按笛卡尔五次多项式轨迹同步控制双臂末端（左右统一点数，每点两侧均到位才推进）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: left_target_pose
+    type: object
+    optional: false
+    description: "左臂轨迹终点位姿，必须包含全部键：target_x / target_y / target_z（位置，米）、x / y / z / w（姿态四元数 xyzw）"
+  - name: right_target_pose
+    type: object
+    optional: false
+    description: "右臂轨迹终点位姿，键与 left_target_pose 相同"
+  - name: left_frame_id
+    type: string
+    optional: true
+    default: "1"
+    description: 左臂目标位姿所在坐标系，默认 1
+  - name: right_frame_id
+    type: string
+    optional: true
+    default: "1"
+    description: 右臂目标位姿所在坐标系，默认 1
+  - name: left_axis_order
+    type: string
+    optional: true
+    default: zyx
+    description: 左臂顺序插值的逐轴执行顺序，默认 zyx
+  - name: left_sequential
+    type: bool
+    optional: true
+    default: true
+    description: 左臂是否逐轴顺序插值，默认 true
+  - name: right_axis_order
+    type: string
+    optional: true
+    default: zyx
+    description: 右臂顺序插值的逐轴执行顺序，默认 zyx
+  - name: right_sequential
+    type: bool
+    optional: true
+    default: true
+    description: 右臂是否逐轴顺序插值，默认 true
+  - name: num_points
+    type: int
+    optional: true
+    description: 轨迹插值点数；不传时按左右臂各自建议值取最大值统一同步
+  - name: speed
+    type: float
+    optional: true
+    default: 0.05
+    description: 末端线速度（米/秒，仅用于日志），默认 0.05
+  - name: step_distance
+    type: float
+    optional: true
+    default: 0.01
+    description: 自动计算点数时的步进距离（米），默认 0.01
+  - name: max_num_points
+    type: int
+    optional: true
+    default: 100
+    description: 插值点数上限，默认 100
+  - name: left_pos_tol
+    type: float
+    optional: true
+    default: 0.05
+    description: 左臂单点位置容差（米），默认 0.05
+  - name: left_orient_tol
+    type: float
+    optional: true
+    default: 0.01
+    description: 左臂单点姿态容差（弧度），默认 0.01
+  - name: right_pos_tol
+    type: float
+    optional: true
+    default: 0.05
+    description: 右臂单点位置容差（米），默认 0.05
+  - name: right_orient_tol
+    type: float
+    optional: true
+    default: 0.01
+    description: 右臂单点姿态容差（弧度），默认 0.01
+  - name: timeout
+    type: float
+    optional: true
+    default: 10.0
+    description: 单点超时时间，单位秒，默认 10.0
+  - name: loop_freq
+    type: float
+    optional: true
+    default: 1.0
+    description: 单点轮询间隔，单位秒，默认 1.0
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"e5","task_name":"control_both_arms_trajectory","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID（最后一点的左臂 CommandHandle）
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: GetExecution
+  taskType: 5
+  summary: 查询本 Ability 启动的语义执行
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"e1","status":"running",...},"message":"查询执行记录"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          command_id:
+            type: string
+            description: 底层命令 ID
+          progress:
+            type: float
+            description: 执行进度
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: StopExecution
+  taskType: 6
+  summary: 停止底层命令并让相关资源进入 hold
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  - name: reason
+    type: string
+    optional: true
+    description: 停止原因（可选，默认为 pilot stop）
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"e1","status":"stopped",...},"message":"停止底层命令"}
+    properties:
+      output:
+        type: object
+        description: 停止后的执行记录
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（stopped/interrupted）
+          phase:
+            type: string
+            description: 停止阶段（held/stop_unconfirmed）
+      message:
+        type: string
+        description: 任务执行说明

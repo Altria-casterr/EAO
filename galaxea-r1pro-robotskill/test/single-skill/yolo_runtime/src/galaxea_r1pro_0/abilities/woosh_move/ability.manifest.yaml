@@ -1,0 +1,220 @@
+abilityName: WooshMove.Demo
+kind: AtomAbility
+schema:
+  config:
+    openAPIV3Schema:
+      description: 能力配置结构
+      properties:
+        robotProfilePath:
+          description: R1 Pro SDK profile 路径
+          type: string
+  debugOption:
+    openAPIV3Schema:
+      description: 调试选项结构，不会影响业务行为，只会留下额外的调试信息
+      properties:
+        logPictureWhenDetecting:
+          default: false
+          description: 如果是，则识别能力在运行时会将图片和识别结果保存到本地
+          type: bool
+      type: object
+tasks:
+- taskName: move_robot
+  taskType: 0
+  abilityRole: navigation
+  actionType: navigation.relative_move
+  schemaVersion: 2
+  summary: 控制底盘沿指定轴相对运动（x/y/z，含到位闭环：定位优先 + 积分兜底），target_x/target_y/yaw(由 target_orientation 换算) 三个方向中恰好一个非零
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: target_x
+    type: float
+    optional: true
+    default: 0.0
+    description: 前后轴（x，base_link 前方为正）相对位移，单位米；与 target_y、yaw 三个方向中恰好一个非零
+  - name: target_y
+    type: float
+    optional: true
+    default: 0.0
+    description: 左右轴（y，base_link 左方为正）相对位移，单位米；与 target_x、yaw 三个方向中恰好一个非零
+  - name: target_orientation
+    type: array
+    items:
+      type: float
+    optional: true
+    default: [0.0, 0.0, 0.0, 1.0]
+    description: 目标姿态四元数 [qx, qy, qz, qw]（base_link 坐标系），仅使用其 yaw 分量，z(自转，度) 与 target_x/target_y 三者恰好一个非零；默认 [0,0,0,1]（无旋转）
+  - name: speed
+    type: float
+    optional: true
+    default: 0.5
+    description: 运动速度（x/y 为米/秒，z 为度/秒），默认 0.5
+  - name: tolerance
+    type: float
+    optional: true
+    description: "到位容差（x/y 为米，z 为度），默认 x/y=0.02、z=0.5"
+  - name: timeout
+    type: float
+    optional: true
+    default: 10.0
+    description: 运动超时时间，单位秒，默认 10.0
+  - name: refresh_interval
+    type: float
+    optional: true
+    default: 0.1
+    description: 底盘速度命令的刷新间隔（秒），默认 0.1
+  - name: settle_time
+    type: float
+    optional: true
+    default: 0.2
+    description: 到位或 finally 停止后的稳定等待时间（秒），默认 0.2
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"m1","task_name":"move_robot","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: stop
+  taskType: 1
+  abilityRole: navigation
+  actionType: navigation.stop
+  schemaVersion: 2
+  summary: 停止底盘运动（紧急停止 + 零速发布）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"m2","task_name":"stop","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: GetExecution
+  taskType: 2
+  summary: 查询本 Ability 启动的语义执行
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"m1","status":"running",...},"message":"查询执行记录"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          command_id:
+            type: string
+            description: 底层命令 ID
+          progress:
+            type: float
+            description: 执行进度
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: StopExecution
+  taskType: 3
+  summary: 停止底层命令并让相关资源进入 hold
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  - name: reason
+    type: string
+    optional: true
+    description: 停止原因（可选，默认为 pilot stop）
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"m1","status":"stopped",...},"message":"停止底层命令"}
+    properties:
+      output:
+        type: object
+        description: 停止后的执行记录
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（stopped/interrupted）
+          phase:
+            type: string
+            description: 停止阶段（held/stop_unconfirmed）
+      message:
+        type: string
+        description: 任务执行说明

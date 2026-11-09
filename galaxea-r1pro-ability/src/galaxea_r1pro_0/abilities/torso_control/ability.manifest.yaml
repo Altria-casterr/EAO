@@ -1,0 +1,261 @@
+abilityName: TorsoControl.Demo
+kind: AtomAbility
+schema:
+  config:
+    openAPIV3Schema:
+      description: 能力配置结构
+      properties:
+        robotProfilePath:
+          description: R1 Pro SDK profile 路径
+          type: string
+  debugOption:
+    openAPIV3Schema:
+      description: 调试选项结构，不会影响业务行为，只会留下额外的调试信息
+      properties:
+        logPictureWhenDetecting:
+          default: false
+          description: 如果是，则识别能力在运行时会将图片和识别结果保存到本地
+          type: bool
+      type: object
+tasks:
+- taskName: control_torso_joints
+  taskType: 0
+  abilityRole: torso
+  actionType: torso.move_to_posture_all
+  schemaVersion: 2
+  physical: true
+  summary: 控制躯干四关节同时移动到目标位置（发布目标后轮询实际位置直到到位或超时）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: positions
+    type: array
+    items:
+      type: float
+    optional: false
+    description: 躯干四关节目标位置数组（弧度，对应底层 4 个关节，按顺序覆盖全部关节）
+  - name: speeds
+    type: array
+    items:
+      type: float
+    optional: true
+    description: 躯干四关节运动速度数组（弧度/秒，可选；不传则由底层决定）
+  - name: effort
+    type: array
+    items:
+      type: float
+    optional: true
+    description: 躯干四关节力矩限制数组（可选）
+  - name: names
+    type: array
+    items:
+      type: string
+    optional: true
+    description: 关节名称数组（可选，透传给底层 JointState 消息的 name 字段）
+  - name: tol
+    type: float
+    optional: true
+    default: 0.02
+    description: 到位容差（弧度），默认 0.02
+  - name: timeout
+    type: float
+    optional: true
+    default: 10.0
+    description: 运动超时时间，单位秒，默认 10.0
+  - name: loop_period
+    type: float
+    optional: true
+    default: 0.1
+    description: 躯干位置轮询间隔，单位秒，默认 0.1
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"t1","task_name":"control_torso_joints","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: control_single_torso_joint
+  taskType: 1
+  abilityRole: torso
+  actionType: torso.move_to_target_pos_single
+  schemaVersion: 2
+  physical: true
+  summary: 控制躯干单个关节移动到目标位置（其余关节保持当前位置，含位置反馈闭环）
+  params:
+  - name: invocation_id
+    type: string
+    optional: true
+    description: 幂等调用 ID，用于查询/停止本次执行（可选）
+  - name: joint_id
+    type: int
+    optional: true
+    default: 0
+    description: 躯干关节编号（0-3，与底层 SDK 索引一致），默认 0
+  - name: target_pos
+    type: float
+    optional: false
+    description: 目标关节位置（弧度）
+  - name: speed
+    type: float
+    optional: true
+    default: 1.5
+    description: 目标关节运动速度（弧度/秒），默认 1.5；其余关节由底层以低速保持
+  - name: tol
+    type: float
+    optional: true
+    default: 0.02
+    description: 到位容差（弧度），默认 0.02
+  - name: timeout
+    type: float
+    optional: true
+    default: 8.0
+    description: 运动超时时间，单位秒，默认 8.0
+  - name: loop_period
+    type: float
+    optional: true
+    default: 0.1
+    description: 躯干位置轮询间隔，单位秒，默认 0.1
+  - name: effort
+    type: array
+    items:
+      type: float
+    optional: true
+    description: 力矩限制数组（可选）
+  - name: names
+    type: array
+    items:
+      type: string
+    optional: true
+    description: 关节名称数组（可选，透传给底层 JointState 消息的 name 字段）
+  returns:
+  - name: None
+    type: object
+    description: 输出为执行记录字典，示例 {"invocation_id":"t2","task_name":"control_single_torso_joint","status":"running","command_id":"..."}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          task_name:
+            type: string
+            description: 任务名
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          progress:
+            type: float
+            description: 执行进度
+          phase:
+            type: string
+            description: 当前阶段
+          command_id:
+            type: string
+            description: 底层命令 ID
+          result:
+            type: object
+            description: 命令结果
+          error:
+            type: object
+            description: 错误信息（失败时）
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: GetExecution
+  taskType: 2
+  summary: 查询本 Ability 启动的语义执行
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"t1","status":"running",...},"message":"查询执行记录"}
+    properties:
+      output:
+        type: object
+        description: 执行记录快照
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（running/completed/failed/stopped/interrupted）
+          command_id:
+            type: string
+            description: 底层命令 ID
+          progress:
+            type: float
+            description: 执行进度
+      message:
+        type: string
+        description: 任务执行说明
+- taskName: StopExecution
+  taskType: 3
+  summary: 停止底层命令并让相关资源进入 hold
+  params:
+  - name: invocation_id
+    type: string
+    optional: false
+    description: 调用 ID
+  - name: reason
+    type: string
+    optional: true
+    description: 停止原因（可选，默认为 pilot stop）
+  returns:
+  - name: None
+    type: object
+    description: 输出为字典结构，示例 {"output":{"invocation_id":"t1","status":"stopped",...},"message":"停止底层命令"}
+    properties:
+      output:
+        type: object
+        description: 停止后的执行记录
+        properties:
+          invocation_id:
+            type: string
+            description: 调用 ID
+          status:
+            type: string
+            description: 执行状态（stopped/interrupted）
+          phase:
+            type: string
+            description: 停止阶段（held/stop_unconfirmed）
+      message:
+        type: string
+        description: 任务执行说明

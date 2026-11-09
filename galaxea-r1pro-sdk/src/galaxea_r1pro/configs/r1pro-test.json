@@ -1,0 +1,12 @@
+{
+  "robot_id": "r1pro-1.0",
+  "backend": "real",
+  "firmware_profile": "vendor-2026.08",
+  "namespace": "r1pro-1.0",
+  "endpoint": "ws://127.0.0.1:9091",
+  "options": {
+    "test_mode": true,
+    "defer_commands": false,
+    "stop_confirmed": true
+  }
+}

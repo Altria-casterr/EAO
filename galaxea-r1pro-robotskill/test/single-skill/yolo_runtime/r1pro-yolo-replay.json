@@ -1,0 +1,1 @@
+{"robot_id": "r1pro-yolo-replay", "backend": "real", "firmware_profile": "real-v1", "endpoint": "ws://127.0.0.1:1", "options": {"test_mode": true}}

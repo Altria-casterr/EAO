@@ -1,0 +1,30 @@
+# 格式说明：实际加载 config/models.example.json 顶层 cameras，本 YAML 不自动加载。
+# null 必须换成现场标定值后才能生成点云。
+# camera_frame/tcp_frame 填实际 TF 名称；此处名称仅示意，不是机器人标定。
+cameras:
+  head_camera:
+    camera_frame: head_color_optical_frame
+    base_frame: base_link
+    robot_frame: base_link
+    camera_intrinsics: {fx: null, fy: null, cx: null, cy: null}
+    depth_scale: 0.001
+    camera_extrinsics:
+      camera_to_tcp: [null, null, null, null, null, null]
+      tcp_frame: head_mount_link
+  left_wrist_camera:
+    camera_frame: left_wrist_color_optical_frame
+    base_frame: base_link
+    robot_frame: base_link
+    camera_intrinsics: {fx: null, fy: null, cx: null, cy: null}
+    depth_scale: 0.001
+    camera_extrinsics:
+      camera_to_tcp: [null, null, null, null, null, null]
+      tcp_frame: left_tcp_link
+  external_camera:
+    camera_frame: external_color_optical_frame
+    base_frame: base_link
+    robot_frame: base_link
+    camera_intrinsics: {fx: null, fy: null, cx: null, cy: null}
+    depth_scale: 0.001
+    camera_extrinsics:
+      camera_to_base: [null, null, null, null, null, null]

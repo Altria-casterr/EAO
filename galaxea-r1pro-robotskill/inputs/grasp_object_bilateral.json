@@ -1,0 +1,70 @@
+{
+  "target": {
+    "object_ref": "box001",
+    "position_m": [
+      2.045,
+      0.685,
+      1.26
+    ],
+    "world_frame": "map",
+    "size": {
+      "long_m": 0.53,
+      "width_m": 0.41,
+      "height_m": 0.24
+    }
+  },
+  "relative_frame": "torso_link4",
+  "safe_offset_m": 0.10,
+  "capture_x_offset_m": -0.10,
+  "capture_z_offset_m": 0.0,
+  "lift_m": 0.15,
+  "torso": {
+    "enabled": false
+  },
+  "stand": {
+    "speeds": [0.5, 0.5, 0.5, 0.5],
+    "tol": 0.02,
+    "timeout": 10.0
+  },
+  "perception": {
+    "conf_threshold": 0.5,
+    "iou_threshold": 0.5
+  },
+  "approach_force": {
+    "force_threshold_n": 1.0,
+    "force_coordinate": ["x"],
+    "step_size_m": 0.01,
+    "loop_freq_s": 0.1,
+    "timeout_s": 12.0
+  },
+  "verify_force": {
+    "force_threshold_n": 2.0,
+    "force_coordinate": ["x"],
+    "step_size_m": 0.001,
+    "loop_freq_s": 0.1,
+    "timeout_s": 12.0
+  },
+  "verify_side": "left",
+  "approach_motion": {
+    "pos_tol": 0.05,
+    "orient_tol": 0.02,
+    "timeout": 10.0,
+    "loop_freq": 0.1,
+    "speed": 0.001,
+    "sequential": true,
+    "axis_order": "zyx",
+    "step_distance": 0.05
+  },
+  "motion": {
+    "pos_tol": 0.05,
+    "orient_tol": 0.02,
+    "timeout": 10.0,
+    "loop_freq": 0.1,
+    "speed": 0.05,
+    "num_points": null,
+    "step_distance": 0.01,
+    "axis_order": "zyx",
+    "sequential": true,
+    "max_num_points": 100
+  }
+}
